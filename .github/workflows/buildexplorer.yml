@@ -53,7 +53,7 @@ jobs:
           --health-timeout=5s
           --health-retries=10
       postgres:
-        image: postgres:18
+        image: postgres:19
         env:
           POSTGRES_DB: logincorex_test
           POSTGRES_USER: logincorex

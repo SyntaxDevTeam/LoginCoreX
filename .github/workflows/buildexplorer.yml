@@ -20,7 +20,7 @@ env:
 jobs:
   verify:
     name: Verify repository
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     services:
       mysql:
         image: mysql:26.10
@@ -170,7 +170,7 @@ jobs:
 
   publish:
     name: Publish ${{ matrix.name }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: verify
     if: github.event_name == 'push'
     strategy:

@@ -21,9 +21,6 @@ authors: [ SyntaxDevTeam ]
 website: https://syntaxdevteam.pl
 
 permissions:
-  logincorex.auth.skip-password:
-    description: Allows a Mojang-verified account to skip the additional server password.
-    default: false
   logincorex.command.privacy:
     description: Allows showing, accepting, rejecting, and revoking the privacy policy after login.
     default: true

@@ -4,6 +4,8 @@
 
 [Home](Home.md) · [Commands](Commands.md) · [Help](Help.md)
 
+Play using a Microsoft account with licensed access to Minecraft: Java Edition. You can buy the game from the official store. [Minecraft.net](https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc)
+
 ## First visit
 
 New players receive a registration dialog. Choose a password, enter it in both fields and confirm. The default length is 8–128 characters. Use a long, unique password that you do not use for email, Discord or Microsoft.
@@ -24,7 +26,7 @@ Use `/logout` to end your session and disconnect. Your account is retained; the 
 
 ## Verified Minecraft identity
 
-If you own an official Minecraft account, sign in to it in your launcher. Your identity is verified during connection, but by default you still use your own server password. An administrator can explicitly allow verified accounts to skip the additional password. Never enter your Microsoft password in a server dialog. See [Account identities](Premium.md) for UUID migration information.
+If you own an official Minecraft account, sign in to it in your launcher. Your identity is verified during connection, but by default you still use your own server password. After signing in, run `/premium` to use only your official Minecraft session on future visits. Never enter your Microsoft password in a server dialog. See [Account identities](Premium.md) for UUID migration information.
 
 ## Privacy choices
 

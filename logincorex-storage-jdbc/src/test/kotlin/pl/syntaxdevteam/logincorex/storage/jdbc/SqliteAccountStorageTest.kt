@@ -27,12 +27,39 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SqliteAccountStorageTest {
+    @Test
+    fun `premium opt-in requires the matching verified account and is idempotent`() = withStorage { storage ->
+        storage.migrate().toCompletableFuture().get()
+        val offline = registration("OfflineUser")
+        assertIs<RegistrationResult.Created>(storage.registerOffline(offline).toCompletableFuture().get())
+        assertFalse(storage.enablePremiumLogin(offline.accountId, offline.minecraftUuid).toCompletableFuture().get())
+
+        val premium = VerifiedMojangIdentity(
+            AccountUsername.parse("PremiumUser"), UUID.randomUUID(), offline.sourceAddress, offline.createdAt,
+        )
+        val account = assertIs<MojangIdentityBindingResult.Bound>(
+            storage.bindVerifiedMojangIdentity(premium).toCompletableFuture().get(),
+        ).account
+        val wrongUuid = UUID.randomUUID()
+        assertFalse(storage.enablePremiumLogin(account.id, wrongUuid).toCompletableFuture().get())
+        assertFalse(storage.isPremiumLoginEnabled(account.id, premium.minecraftUuid).toCompletableFuture().get())
+        val first = storage.enablePremiumLogin(account.id, premium.minecraftUuid).toCompletableFuture()
+        val second = storage.enablePremiumLogin(account.id, premium.minecraftUuid).toCompletableFuture()
+        assertTrue(first.get())
+        assertTrue(second.get())
+        storage.migrate().toCompletableFuture().get()
+        assertTrue(storage.isPremiumLoginEnabled(account.id, premium.minecraftUuid).toCompletableFuture().get())
+        assertFalse(storage.isPremiumLoginEnabled(account.id, wrongUuid).toCompletableFuture().get())
+        assertFalse(storage.isPremiumLoginEnabled(offline.accountId, premium.minecraftUuid).toCompletableFuture().get())
+    }
+
     @Test fun uuidLookupReturnsOnlyTheMatchingAccount() = withStorage { storage ->
         storage.migrate().toCompletableFuture().get()
         val registration = registration("ApiLookup")

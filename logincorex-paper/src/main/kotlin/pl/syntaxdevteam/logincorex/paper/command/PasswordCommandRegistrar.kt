@@ -69,6 +69,7 @@ class PasswordCommandRegistrar(
     private val reloadGateway: ReloadCommandGateway,
     private val consentGateway: ConsentCommandGateway,
     private val authenticationGateway: AuthenticationCommandGateway,
+    private val enablePremiumLogin: (Player) -> Unit,
     private val canSuggestOnlinePlayers: (CommandSender) -> Boolean,
 ) {
     private fun onlinePlayerArgument() =
@@ -97,6 +98,14 @@ class PasswordCommandRegistrar(
                         }.build(),
                 )
             }
+            event.registrar().register(
+                Commands.literal("premium")
+                    .requires { it.sender is Player }
+                    .executes { context ->
+                        (context.source.sender as? Player)?.let(enablePremiumLogin)
+                        1
+                    }.build(),
+            )
             event.registrar().register(
                 Commands.literal("privacy")
                     .requires { it.sender.hasPermission("logincorex.command.privacy") }

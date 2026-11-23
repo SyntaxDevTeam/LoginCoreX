@@ -6,6 +6,8 @@
 
 Install LoginCoreX Velocity in the proxy's `plugins` folder and LoginCoreX Paper on the game backend. The proxy module alone does not provide password forms or world isolation. Validate your complete network on a private environment.
 
+Whenever possible, keep `online-mode = true` on the public proxy and use native Minecraft authentication without the LoginCoreX proxy module. The example below applies when LoginCoreX handles authentication at the entry point. The `online-mode=false` setting in `server.properties` is for the private backend using modern forwarding. See [recommended use](Home.md#recommended-use).
+
 ## Forwarding setup
 
 With the proxy stopped, configure `velocity.toml`:

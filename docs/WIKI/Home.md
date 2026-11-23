@@ -6,7 +6,11 @@
 
 LoginCoreX to plugin do logowania na serwerach Minecraft Java Edition. Pomaga chronić konta graczy i pilnuje, żeby osoba, która jeszcze się nie zalogowała, nie mogła grzebać w skrzynkach, niszczyć budowli ani przeszkadzać innym.
 
-Masz serwer dla znajomych albo rozwijasz własną społeczność? LoginCoreX zapewnia rejestrację i logowanie wszystkim graczom, również przy `online-mode=false`, oraz zabezpieczenia przed spamem połączeń.
+## Zalecane użycie
+
+Zalecamy natywne uwierzytelnianie Minecraft w trybie `online-mode=true` na publicznym punkcie wejścia. Jeśli wdrożenie wymaga wyłączenia tego trybu, używaj LoginCoreX do blokowania nieautoryzowanego dostępu i ochrony nicków premium przed podszywaniem się. Gracz może użyć chronionego nicku tylko po potwierdzeniu sesji Minecraft. Nieudana weryfikacja kończy połączenie.
+
+Nie popieramy piractwa. Zachęcamy do korzystania z legalnej kopii gry i zakupu Minecraft: Java Edition w oficjalnym sklepie. [Minecraft.net](https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc)
 
 ## Co zyskujesz?
 

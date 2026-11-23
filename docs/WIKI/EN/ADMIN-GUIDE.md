@@ -8,6 +8,8 @@ Follow this guide from initial setup to daily operations. Detailed setting names
 
 ## 1. Choose your deployment
 
+Keep native Minecraft authentication enabled at your public entry point whenever possible. The options below cover LoginCoreX deployments. [Choosing an authentication mode](Installation.md#choose-an-authentication-mode)
+
 A standalone Paper/Purpur server needs the matching Paper JAR, Java 25 and, initially, local SQLite storage. A Velocity network needs the proxy module, Paper on the backend, modern forwarding and firewall restrictions on direct backend access.
 
 Choose the artifact for your Minecraft version using [Compatibility](Compatibility.md), then follow [Installation](Installation.md). Do not run competing authentication plugins together.
@@ -53,10 +55,11 @@ Operators have administrative defaults. Check inherited permissions and operator
 
 Complete these checks on your private test environment before opening access; mark them only after actually verifying the result.
 
-- [ ] All new players receive registration and returning players receive login, regardless of the server's online-mode setting.
+- [ ] All new players receive registration and returning players receive login, unless the player enabled premium login with `/premium`.
 - [ ] Incorrect passwords deny access and correct passwords proceed.
 - [ ] Players cannot affect the world before authentication and required acceptance.
 - [ ] Your own official Minecraft account passes session verification and requires a server password by default.
+- [ ] After `/premium`, a verified player reconnects after a restart without the password form. An offline account cannot enable premium login.
 - [ ] Password changes, logout and repeat login work for authenticated accounts.
 - [ ] Acceptance persists and rejection ends the connection.
 - [ ] Accounts remain usable after a restart.

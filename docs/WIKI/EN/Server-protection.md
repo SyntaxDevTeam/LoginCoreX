@@ -4,6 +4,8 @@
 
 [Home](Home.md) · [Configuration](Configuration.md) · [Integrations](Integrations.md)
 
+Keep native Minecraft authentication enabled with `online-mode=true` at the public entry point whenever possible. If your deployment requires disabling it, use LoginCoreX to block unauthorized access and protect official Minecraft usernames from impersonation. LoginCoreX requires a verified Minecraft session for protected usernames and denies access if verification fails. [Recommended use](Home.md#recommended-use)
+
 ## Authentication before gameplay
 
 Before authentication, players cannot move normally, break/place blocks, use items, fight, chat, run commands or alter inventory. They are separated from authenticated players and protected from damage. Protection also covers buckets, books, vehicles, portals and other less obvious interactions. Test your own plugin combination on a private server.

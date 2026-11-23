@@ -242,6 +242,17 @@ class JdbcAccountStorage(
                     }
                     recordMigration(connection, 10)
                 }
+                if (!hasMigration(connection, 11)) {
+                    connection.createStatement().use { statement ->
+                        statement.executeUpdate("""CREATE TABLE IF NOT EXISTS premium_login_preferences (
+                            account_id VARCHAR(36) NOT NULL,
+                            minecraft_uuid VARCHAR(36) NOT NULL,
+                            PRIMARY KEY (account_id, minecraft_uuid),
+                            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+                        )""".trimIndent())
+                    }
+                    recordMigration(connection, 11)
+                }
                 connection.commit()
             } catch (failure: Throwable) {
                 connection.rollback()
@@ -894,6 +905,46 @@ class JdbcAccountStorage(
             )
         }
     }
+
+    override fun isPremiumLoginEnabled(accountId: AccountId, minecraftUuid: UUID): CompletionStage<Boolean> =
+        executor.submit {
+            dataSource.connection.use { connection -> isPremiumLoginEnabled(connection, accountId, minecraftUuid) }
+        }
+
+    override fun enablePremiumLogin(accountId: AccountId, minecraftUuid: UUID): CompletionStage<Boolean> =
+        executor.submit {
+            dataSource.connection.use { connection ->
+                val insert = when (databaseType) {
+                    JdbcDatabaseType.SQLITE -> "INSERT OR IGNORE"
+                    JdbcDatabaseType.MYSQL, JdbcDatabaseType.MARIADB -> "INSERT IGNORE"
+                    JdbcDatabaseType.POSTGRESQL -> "INSERT"
+                }
+                val onConflict = if (databaseType == JdbcDatabaseType.POSTGRESQL) {
+                    " ON CONFLICT (account_id, minecraft_uuid) DO NOTHING"
+                } else ""
+                val updated = connection.prepareStatement(
+                    """$insert INTO premium_login_preferences (account_id, minecraft_uuid)
+                        SELECT id, minecraft_uuid FROM accounts
+                        WHERE id = ? AND minecraft_uuid = ? AND identity_type = 'MOJANG'""".trimIndent() + onConflict,
+                ).use { statement ->
+                    statement.setString(1, accountId.value.toString())
+                    statement.setString(2, minecraftUuid.toString())
+                    statement.executeUpdate()
+                }
+                updated == 1 || isPremiumLoginEnabled(connection, accountId, minecraftUuid)
+            }
+        }
+
+    private fun isPremiumLoginEnabled(connection: Connection, accountId: AccountId, minecraftUuid: UUID): Boolean =
+        connection.prepareStatement(
+            """SELECT 1 FROM premium_login_preferences p
+                JOIN accounts a ON a.id = p.account_id AND a.minecraft_uuid = p.minecraft_uuid
+                WHERE p.account_id = ? AND p.minecraft_uuid = ? AND a.identity_type = 'MOJANG'""".trimIndent(),
+        ).use { statement ->
+            statement.setString(1, accountId.value.toString())
+            statement.setString(2, minecraftUuid.toString())
+            statement.executeQuery().use { it.next() }
+        }
 
     override fun findPasswordHash(accountId: AccountId): CompletionStage<String?> = executor.submit {
         dataSource.connection.use { connection ->

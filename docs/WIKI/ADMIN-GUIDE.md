@@ -8,6 +8,8 @@ Od pierwszego uruchomienia do codziennej obsługi: ten przewodnik prowadzi przez
 
 ## 1. Wybierz sposób uruchomienia
 
+Jeśli serwer może korzystać z natywnego uwierzytelniania Minecraft, pozostaw tryb online na publicznym wejściu. Poniższe warianty dotyczą wdrożeń LoginCoreX. [Wybór trybu uwierzytelniania](Instalacja.md#wybierz-tryb-uwierzytelniania)
+
 | Twój serwer | Co przygotować |
 | --- | --- |
 | Jeden Paper/Purpur | Właściwy wariant Paper, Java 25, lokalna baza SQLite na start |
@@ -75,6 +77,7 @@ Przeprowadź te próby na prywatnym serwerze testowym przed otwarciem dostępu. 
 - [ ] Błędne hasło nie otwiera dostępu do gry; poprawne pozwala przejść dalej.
 - [ ] Przed zakończeniem logowania i wymaganej akceptacji nie można wpływać na świat.
 - [ ] Własne oficjalne konto Minecraft przechodzi weryfikację i domyślnie wymaga również hasła serwerowego.
+- [ ] Po użyciu `/premium` zweryfikowany gracz wraca po restarcie bez formularza hasła. Konto offline nie może włączyć trybu premium.
 - [ ] `/changepassword`, `/logout` i ponowne logowanie działają dla uwierzytelnionego konta.
 - [ ] Akceptacja polityki jest zapisana, a odmowa kończy połączenie.
 - [ ] Po restarcie konta nadal istnieją i można się zalogować.

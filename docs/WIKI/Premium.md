@@ -6,7 +6,13 @@
 
 ## Wejdź na swoje konto i graj
 
-LoginCoreX wymaga rejestracji i logowania każdego gracza, również przy `online-mode=false`. Jeśli nick jest przypisany do oficjalnego konta Minecraft, serwer dodatkowo potwierdza własność jego sesji. Po tej weryfikacji gracz domyślnie nadal loguje się hasłem do konta serwerowego. Administrator może przyznać mu uprawnienie `logincorex.auth.skip-password`, pozwalające pomijać to hasło.
+Nie popieramy piractwa. Zachęcamy do korzystania z legalnej kopii gry i zakupu Minecraft: Java Edition w oficjalnym sklepie. [Minecraft.net](https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc)
+
+Przy pierwszym wejściu na oficjalnym koncie Minecraft serwer potwierdza sesję i prosi o rejestrację lub logowanie do konta serwerowego. Po zalogowaniu wpisz w grze `/premium`. Od kolejnego połączenia LoginCoreX uwierzytelnia Cię wyłącznie przez oficjalną sesję Minecraft, bez formularza hasła serwerowego. Wybór jest zapisywany dla Twojego konta i oficjalnego UUID.
+
+Komenda działa wyłącznie dla gracza zalogowanego ze zweryfikowaną sesją Minecraft. Jeśli masz dotychczasowe konto offline o tym samym nicku, najpierw ukończ opisaną niżej migrację. Nieudana weryfikacja chronionego nicku kończy połączenie, także po użyciu `/premium`.
+
+Po aktualizacji z wersji z uprawnieniem `logincorex.auth.skip-password` zaloguj się przez formularz i wpisz `/premium`. Jeśli konto nie ma hasła serwerowego, wtyczka najpierw pokaże formularz rejestracji.
 
 Nie podawaj hasła do Microsofta w oknie serwera. Na konto Microsoft logujesz się w launcherze.
 

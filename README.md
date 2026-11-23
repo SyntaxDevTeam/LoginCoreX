@@ -25,12 +25,16 @@ LoginCoreX is an advanced authentication and identity protection system for Mine
 
 Designed for Paper and Velocity, it provides secure player registration, authentication, premium account verification, identity protection, and session management.
 
-Protect player identities, prevent account impersonation, and secure every connection.
+## Recommended use
+
+Keep native Minecraft authentication enabled with `online-mode=true` at the public entry point whenever possible. If your deployment requires disabling it, use LoginCoreX to block unauthorized access and protect official Minecraft usernames from impersonation. LoginCoreX requires a verified Minecraft session for protected usernames and denies access if verification fails.
+
+We do not support piracy. Use a licensed copy of Minecraft: Java Edition and buy the game from the official store. [Minecraft.net](https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc)
 
 ## ✨ Why LoginCoreX?
 
 - **Registration and login for everyone.** Every player registers and uses an in-game password dialog by default, without placing passwords in commands or chat.
-- **Verified Minecraft identity protection.** Officially owned usernames are checked against the Minecraft session; a verified account can skip the additional server password when explicitly authorized. Failed verification of a protected username denies access.
+- **Verified Minecraft identity protection.** Officially owned usernames are checked against the Minecraft session; signed-in players with a verified session can enable passwordless login with `/premium`. Failed verification of a protected username denies access.
 - **World protection before login.** PRE_AUTH isolation blocks movement, interactions, inventory actions, combat, chat, and unauthorized commands.
 - **Abuse prevention.** Limits on connections, password attempts, registrations, and reconnects help control bots and brute-force attempts.
 - **Passwords protected with Argon2id.** Password changes and administrative resets use forms, and important operations are recorded in the audit log.
@@ -56,12 +60,14 @@ See the [installation guide](docs/WIKI/EN/Installation.md) for artifact selectio
 
 ## ⚙️ Quick start
 
+Use these steps only if your standalone deployment requires LoginCoreX to handle authentication. For native Minecraft authentication on a standalone server, keep `online-mode=true` and run without LoginCoreX.
+
 1. Prepare a test server with Java 25 and back up your data.
 2. Stop the server and place the appropriate JAR in `plugins`.
-3. For a standalone server, set `online-mode=false` in `server.properties` and leave Paper's Velocity support disabled.
+3. Set `online-mode=false` in `server.properties` as required by the current standalone LoginCoreX deployment. Leave Paper's Velocity support disabled.
 4. Start the server and check the console for LoginCoreX readiness. The plugin creates its configuration and SQLite database.
 5. Customize `plugins/LoginCoreX/config.yml`, messages, and your privacy policy URL. Restart the server.
-6. Test registration and repeat login with different account identities, optional password exemption for verified players, and protection before authentication.
+6. Test registration, repeat login, reconnecting without a password form after using `/premium` with a verified account, and isolation before authentication. Verify that an unverified session is denied access to a protected Minecraft username.
 
 Only open an `online-mode=false` server to players when authentication protection is working. For proxy networks, follow the [separate Velocity guide](docs/WIKI/EN/Velocity.md), covering forwarding and backend protection.
 
@@ -71,6 +77,7 @@ Only open an `online-mode=false` server to players when authentication protectio
 
 | Command | Purpose |
 | --- | --- |
+| `/premium` | Enable sign-in through your verified Minecraft session alone |
 | `/changepassword` | Change your own server account password |
 | `/logout` | End your authenticated session and disconnect |
 | `/privacy` | View the privacy policy and manage acceptance |

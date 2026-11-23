@@ -10,7 +10,7 @@ To wydanie korzysta z automatycznego okna Minecrafta. Hasło wpisujesz w jego po
 
 ## Nie widzę okna logowania
 
-Domyślnie każdy gracz korzysta z rejestracji i logowania hasłem. Tylko uprawnione konto po weryfikacji tożsamości Minecraft może pominąć hasło. Jeśli nie pojawia się formularz, administrator powinien sprawdzić wersję klienta, zgodność z serwerem, uruchomienie pluginu i błędy w konsoli. W pierwszej próbie użyj klienta zgodnego z wersją serwera, bez dodatków zmieniających ekran gry.
+Domyślnie każdy gracz korzysta z rejestracji i logowania hasłem. Gracz, który włączył `/premium`, loguje się przy kolejnych wejściach przez zweryfikowaną sesję Minecraft. Jeśli nie pojawia się formularz, administrator powinien sprawdzić wersję klienta, zgodność z serwerem, uruchomienie pluginu i błędy w konsoli. W pierwszej próbie użyj klienta zgodnego z wersją serwera, bez dodatków zmieniających ekran gry.
 
 ## Hasła nie są identyczne
 

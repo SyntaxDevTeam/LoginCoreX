@@ -8,6 +8,7 @@ Poniższe komendy działają na serwerze gry. Używa się ich po zalogowaniu, be
 
 | Komenda | Dla kogo | Co robi |
 | --- | --- | --- |
+| `/premium` | Zalogowany gracz ze zweryfikowaną sesją Minecraft | Włącza logowanie przez oficjalną sesję bez hasła serwerowego od kolejnego połączenia |
 | `/changepassword` | Zalogowany gracz | Otwiera okno zmiany własnego hasła |
 | `/logout` | Zalogowany gracz | Kończy sesję i rozłącza gracza |
 | `/lcx`, `/lcx help` | Zalogowany gracz lub konsola | Pokazuje sformatowaną listę komend dostępnych dla bieżącego nadawcy |
@@ -60,7 +61,7 @@ Przekaż nowe hasło prywatnie i poproś gracza o zmianę przez `/changepassword
 
 Logowanie i rejestracja otwierają się automatycznie w oknie. `/login` i `/register` bez argumentów ponownie otwierają odpowiednie, już przygotowane okno podczas PRE_AUTH po wejściu do gry. Nie wpisuj hasła w komendzie. Komenda nie zmienia rodzaju formularza: `/register` nie zastępuje logowania do istniejącego konta. Podczas wysyłania formularza ponowne otwarcie jest pomijane. W autoryzacji przed wejściem do gry (Configuration Phase) korzystaj z automatycznego okna; komendy gracza nie są wtedy dostępne. Pozostałe komendy są zablokowane przed zalogowaniem.
 
-Nie ma komend `/premium` ani `/unregister`. `/logincorex reload` przeładowuje obecnie
+Komenda `/unregister` jest niedostępna. `/logincorex reload` przeładowuje obecnie
 `migration.unmanaged-plugin-scan.ignored-plugin-directories` bez restartu i bez zatrzymywania
 uwierzytelniania. Pozostałe ustawienia nadal wymagają pełnego restartu serwera; komenda
 potwierdza liczbę aktywnych pominięć albo zachowuje poprzednią listę przy błędnym YAML/nazwie.

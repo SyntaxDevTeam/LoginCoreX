@@ -46,9 +46,6 @@ class ConfigurationAuthenticationRouter(
     private val onMojangActivated: (java.util.UUID) -> Unit,
     private val onAdmissionDenied: (AuthenticationFormContext, String) -> Unit,
     private val onFailure: (Throwable) -> Unit,
-    private val premiumPasswordBypass: (java.util.UUID) -> java.util.concurrent.CompletionStage<Boolean> = {
-        java.util.concurrent.CompletableFuture.completedFuture(false)
-    },
 ) {
     fun route(
         connection: PlayerConfigurationConnection,
@@ -114,19 +111,12 @@ class ConfigurationAuthenticationRouter(
             deny(connection, ticket, premiumRequiredMessage)
             return
         }
+        if (!current(connection, ticket, context)) return
         try {
-            premiumPasswordBypass(officialUuid).toCompletableFuture().orTimeout(
-                3, java.util.concurrent.TimeUnit.SECONDS,
-            ).exceptionally { false }.thenCompose { skipPassword ->
-                if (!current(connection, ticket, context)) {
-                    java.util.concurrent.CompletableFuture.failedFuture(
-                        IllegalStateException("Connection is no longer awaiting authentication"),
-                    )
-                } else mojang.authenticate(VerifiedMojangAuthenticationContext(
-                    context.connectionId, context.username, context.sourceAddress, officialUuid,
-                    context.sessionNonce, passwordRequired = !skipPassword,
-                ))
-            }.whenComplete { result, failure ->
+            mojang.authenticate(VerifiedMojangAuthenticationContext(
+                context.connectionId, context.username, context.sourceAddress, officialUuid,
+                context.sessionNonce,
+            )).whenComplete { result, failure ->
                 if (!liveConnection(connection, ticket, context)) return@whenComplete
                 if (failure != null || result == null) {
                     if (failure != null) runCatching { onFailure(failure) }

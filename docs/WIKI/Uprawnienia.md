@@ -9,7 +9,6 @@ Uprawnienie określa, kto może użyć danej funkcji. Zwykłe logowanie i rejest
 | Uprawnienie | Dostęp | Domyślnie |
 | --- | --- | --- |
 | `logincorex.command.changepassword` | Zmiana własnego hasła | Wszyscy gracze |
-| `logincorex.auth.skip-password` | Pominięcie hasła serwerowego po potwierdzeniu tożsamości Minecraft | Domyślnie wyłączone |
 | `logincorex.command.privacy` | Wyświetlanie polityki i zarządzanie akceptacją | Wszyscy gracze |
 | `logincorex.command.logout` | Wylogowanie | Wszyscy gracze |
 | `logincorex.admin.info` | Podstawowy raport `/logincorex info <nick>` | Operatorzy serwera |
@@ -30,7 +29,7 @@ Uprawnienia możesz przypisać w używanym na serwerze pluginie do zarządzania 
 
 Graczom wystarczą domyślne uprawnienia komend gracza. Dostęp do `logincorex.admin.password` daj tylko osobom, którym powierzasz odzyskiwanie kont. Nie musi go mieć każdy moderator czatu. Jeśli moderator ma otrzymywać alerty, ale nie powinien widzieć danych sieciowych, nadaj mu samo `logincorex.admin.alerts`. `logincorex.admin.info` otwiera raport podstawowy, natomiast `view-ip`, `view-geo`, `view-security` i `alts` niezależnie dodają sekcje wrażliwe. Konsola serwera otrzymuje pełny wariant diagnostyczny.
 
-Samo nadanie uprawnienia nie omija weryfikacji tożsamości Minecraft, zabezpieczeń przed wejściem do świata ani limitów połączeń. Zmiana hasła oraz wylogowanie dotyczą uwierzytelnionych kont. Uprawnienie `logincorex.auth.skip-password` umożliwia pominięcie dodatkowego hasła wyłącznie graczowi z już zweryfikowaną oficjalną tożsamością Minecraft. Domyślnie każdy gracz korzysta z rejestracji i logowania hasłem.
+Samo nadanie uprawnienia nie omija weryfikacji tożsamości Minecraft, zabezpieczeń przed wejściem do świata ani limitów połączeń. Zmiana hasła oraz wylogowanie dotyczą uwierzytelnionych kont. Gracz ze zweryfikowaną sesją Minecraft sam włącza logowanie premium komendą `/premium`. Komenda nie wymaga specjalnego uprawnienia.
 
 ## VPN i multi-konta na proxy
 

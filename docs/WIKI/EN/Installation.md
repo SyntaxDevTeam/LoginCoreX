@@ -4,6 +4,10 @@
 
 [Home](Home.md) · [Configuration](Configuration.md) · [Help](Help.md)
 
+## Choose an authentication mode
+
+Keep `online-mode=true` at your public entry point if you can use native Minecraft authentication. On standalone Paper, Purpur or Folia, use that setup without LoginCoreX. The procedure below is for deployments that require the plugin to handle authentication. See [recommended use](Home.md#recommended-use).
+
 ## Before you start
 
 Prepare a private Minecraft Java Edition test server, Java 25 and access to server files and the console. The default build targets Paper 26.3. Choose other Minecraft variants according to their artifact descriptions; see [Compatibility](Compatibility.md) for Purpur, Folia and Velocity.
@@ -32,7 +36,7 @@ Distributions are written to `logincorex-paper/build/libs` and `logincorex-veloc
 
 1. Stop the server and back up its files.
 2. Put the matching Paper JAR in `plugins`.
-3. Set `online-mode=false` in `server.properties` so LoginCoreX can verify player identities and protect authentication on this server.
+3. Set `online-mode=false` in `server.properties`. The current standalone LoginCoreX deployment requires this setting.
 4. Leave Velocity support disabled in `config/paper-global.yml` on standalone servers.
 5. Start the test server and let the plugin create its configuration and account database.
 6. Check the console for readiness and resolve startup errors before opening access.
@@ -43,11 +47,12 @@ Do not expose an `online-mode=false` server while authentication protection is u
 
 ## First-launch checklist
 
+- [ ] An unverified Minecraft session is denied access to a protected Minecraft username.
 - [ ] A new account receives a registration form with two password fields.
 - [ ] A returning account receives a login form.
 - [ ] Movement, containers and commands are blocked before authentication.
 - [ ] Correct passwords grant access; incorrect passwords do not.
-- [ ] Your official Minecraft identity passes session verification and requires the server password unless exempted.
+- [ ] Your official Minecraft identity passes session verification and requires the server password until the player enables `/premium`.
 - [ ] `/changepassword` and `/logout` work for authenticated accounts.
 - [ ] Accounts survive a restart and can log in again.
 

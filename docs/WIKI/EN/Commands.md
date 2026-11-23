@@ -8,6 +8,7 @@ Run player commands in Minecraft after signing in. The console supports help, re
 
 | Command | Purpose |
 | --- | --- |
+| `/premium` | Enable sign-in through your verified Minecraft session alone from the next connection |
 | `/changepassword` | Open a password-change dialog for your authenticated account |
 | `/logout` | End an active session and disconnect |
 | `/privacy [show\|accept\|reject\|revoke\|status]` | View the policy or manage acceptance after account authentication |
@@ -37,7 +38,7 @@ Confirm account ownership first. An authenticated administrator runs `/lcx setpa
 
 ## Login and reload
 
-Registration and login open automatically. Argument-free `/login` and `/register` reopen the matching form already prepared during PRE_AUTH after entering the game. Never supply a password as a command argument. These commands cannot switch the authorized form type and are ignored while submitting. During Configuration Phase, use the automatic dialog: player commands are unavailable there. `/premium` and `/unregister` remain unavailable. Other commands are blocked before authentication; while waiting for privacy acceptance, only `/privacy` is allowed.
+Registration and login open automatically. Argument-free `/login` and `/register` reopen the matching form already prepared during PRE_AUTH after entering the game. Never supply a password as a command argument. These commands cannot switch the authorized form type and are ignored while submitting. During Configuration Phase, use the automatic dialog: player commands are unavailable there. `/premium` is available after sign-in with a verified Minecraft session. `/unregister` remains unavailable. Other commands are blocked before authentication; while waiting for privacy acceptance, only `/privacy` is allowed.
 
 `reload` updates only `migration.unmanaged-plugin-scan.ignored-plugin-directories`. Invalid YAML or directory names leave the last valid list active. Other settings and messages require a full restart.
 

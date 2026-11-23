@@ -7,8 +7,6 @@ import pl.syntaxdevteam.logincorex.paper.lifecycle.closeTransport
 import pl.syntaxdevteam.logincorex.paper.lifecycle.RetiringResource
 import net.minecraft.server.MinecraftServer
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionStage
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import io.papermc.paper.configuration.GlobalConfiguration
@@ -25,6 +23,8 @@ import pl.syntaxdevteam.logincorex.api.AuthenticationStatusProvider
 import pl.syntaxdevteam.logincorex.paper.api.PaperAuthenticationStatusProvider
 import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.entity.Player
+import pl.syntaxdevteam.logincorex.domain.account.IdentityType
+import pl.syntaxdevteam.logincorex.domain.session.AuthenticationMethod
 import org.bukkit.configuration.file.YamlConfiguration
 import pl.syntaxdevteam.logincorex.domain.session.ConnectionId
 import pl.syntaxdevteam.logincorex.domain.session.ConnectionState
@@ -172,6 +172,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 reloadCommandGateway,
                 consentCommandGateway,
                 authenticationGateway = plugin.authenticationCommandGateway,
+                enablePremiumLogin = { player -> commandPlugin.enablePremiumLogin?.invoke(player) },
                 canSuggestOnlinePlayers = { sender ->
                     sender is ConsoleCommandSender ||
                         sender is Player &&
@@ -807,8 +808,34 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 dialogs.reopen(player, registration)
             }
         }
+        val premiumRequests = java.util.concurrent.ConcurrentHashMap.newKeySet<UUID>()
+        val premiumEnabled = messages.stringMessageToComponentNoPrefix("auth", "premium_login_enabled")
+        val premiumSessionRequired = messages.stringMessageToComponentNoPrefix("auth", "premium_login_verified_session_required")
+        val premiumEnableFailed = messages.stringMessageToComponentNoPrefix("auth", "internal_failure")
+        plugin.enablePremiumLogin = enablePremium@{ player ->
+            if (!player.isOnline || !isAuthenticated(player)) return@enablePremium
+            val minecraftUuid = player.uniqueId
+            val session = sessions.getActive(minecraftUuid)
+            val accountId = session?.accountId
+            if (accountId == null || session.identityType != IdentityType.MOJANG || session.minecraftUuid != minecraftUuid ||
+                (session.authenticationMethod != AuthenticationMethod.MOJANG && session.authenticationMethod != AuthenticationMethod.PASSWORD)
+            ) {
+                player.sendMessage(premiumSessionRequired)
+                return@enablePremium
+            }
+            if (!premiumRequests.add(minecraftUuid)) return@enablePremium
+            storage.enablePremiumLogin(accountId, minecraftUuid).whenComplete { enabled, failure ->
+                premiumRequests.remove(minecraftUuid)
+                if (failure != null) logger.log(java.util.logging.Level.WARNING, "Cannot enable premium login", failure)
+                scheduler.entity(player, Runnable {
+                    if (player.isOnline && sessions.getActive(minecraftUuid)?.sessionNonce == session.sessionNonce) {
+                        player.sendMessage(if (enabled == true) premiumEnabled else premiumEnableFailed)
+                    }
+                })
+            }
+        }
         val router = AuthenticationDialogRouter(
-            storage, dialogs, premiumMigrationDialogs, access, scheduler,
+            storage, dialogs, premiumMigrationDialogs, access, sessions, scheduler,
             premiumLookup = premiumLookup,
             mojangAuthentication = mojangAuthentication,
             loginAdmission = loginAdmission,
@@ -1165,7 +1192,6 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                     }
                 },
                 onFailure = { logger.log(java.util.logging.Level.WARNING, "Pre-join authentication routing failed", it) },
-                premiumPasswordBypass = ::canSkipPremiumPassword,
             )
             val preJoinListener = PreJoinConfigurationListener(
                 sessions = sessions,
@@ -1184,7 +1210,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                     consent.authenticated(id)
                     val method = sessions.get(ConnectionId(id))?.authenticationMethod
                     sendAuthenticationSuccess(id, if (method ==
-                        pl.syntaxdevteam.logincorex.domain.session.AuthenticationMethod.MOJANG
+                        AuthenticationMethod.MOJANG
                     ) premiumAuthenticationSuccess else offlineAuthenticationSuccess)
                 },
             )
@@ -1199,19 +1225,6 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 messages.stringMessageToComponentNoPrefix("auth", "pre_auth_full"),
                 onEntered = { player -> consent.prepare(player.uniqueId); router.route(player) },
             ), plugin)
-        }
-    }
-
-    private fun canSkipPremiumPassword(minecraftUuid: UUID): CompletionStage<Boolean> {
-        if (!server.pluginManager.isPluginEnabled("LuckPerms")) return CompletableFuture.completedFuture(false)
-        return try {
-            net.luckperms.api.LuckPermsProvider.get().userManager.loadUser(minecraftUuid)
-                .thenApply { user ->
-                    user.cachedData.permissionData
-                        .checkPermission("logincorex.auth.skip-password").asBoolean()
-                }.toCompletableFuture().orTimeout(3, TimeUnit.SECONDS).exceptionally { false }
-        } catch (_: Exception) {
-            CompletableFuture.completedFuture(false)
         }
     }
 
@@ -1231,6 +1244,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
         val cleanup = CompletableFuture<Void>()
         maintenance?.stop(cleanup, MinecraftServer.getServer().connection.connections.map { it.channel })
         server.servicesManager.unregisterAll(plugin)
+        plugin.enablePremiumLogin = null
         plugin.authenticationCommandGateway.delegate = null
         passwordCommandGateway.delegate = null
         logoutCommandGateway.delegate = null

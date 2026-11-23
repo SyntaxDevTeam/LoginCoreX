@@ -6,7 +6,7 @@
 
 Velocity to wejście do sieci serwerów: gracz łączy się z jednym adresem, a proxy przekazuje go do serwera gry. LoginCoreX ma osobną wersję na Velocity oraz wersję Paper na serwer gry.
 
-Poniższa instrukcja opisuje ustawienia proxy i backendu. Oba moduły są potrzebne do obsługi logowania w sieci.
+Jeśli sieć może korzystać z natywnej weryfikacji Minecraft, pozostaw `online-mode = true` na publicznym proxy i korzystaj z natywnego uwierzytelniania bez modułu LoginCoreX na proxy. Poniższy przykład dotyczy wdrożenia, w którym LoginCoreX przejmuje uwierzytelnianie na wejściu. W takim wdrożeniu wymagane są oba moduły. Ustawienie `online-mode=false` w pliku `server.properties` dotyczy prywatnego backendu z modern forwarding. Zobacz [zalecane użycie](Home.md#zalecane-użycie).
 
 ## Co zainstalować?
 

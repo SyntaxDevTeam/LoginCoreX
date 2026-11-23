@@ -4,6 +4,10 @@
 
 [Home](Home.md) · [Konfiguracja](Konfiguracja.md) · [Pomoc](Pomoc.md)
 
+## Wybierz tryb uwierzytelniania
+
+Jeżeli możesz korzystać z natywnej weryfikacji Minecraft, pozostaw `online-mode=true` na publicznym punkcie wejścia. Na samodzielnym Paper, Purpur lub Folia wybierz w takim przypadku instalację bez LoginCoreX. Poniższa procedura dotyczy wdrożenia, które wymaga powierzenia uwierzytelniania wtyczce. Zobacz [zalecane użycie](Home.md#zalecane-użycie).
+
 ## Zanim zaczniesz
 
 Przygotuj serwer testowy Minecraft Java Edition, dostęp do jego plików i konsoli oraz Javę 25. Domyślny build jest przygotowany dla Paper 26.3; warianty dla innych wersji Minecraft dobieraj zgodnie z opisem artefaktu. Informacje o Purpur, Folia i Velocity znajdziesz w [zgodności](Zgodnosc.md).
@@ -36,7 +40,7 @@ Wyniki znajdziesz w `logincorex-paper/build/libs` i `logincorex-velocity/build/l
 
 1. Wyłącz serwer i zrób kopię jego plików.
 2. Umieść plik LoginCoreX w katalogu `plugins`.
-3. W `server.properties` ustaw `online-mode=false`. To ustawienie pozwala LoginCoreX obsługiwać weryfikację tożsamości i logowanie wszystkich graczy.
+3. W `server.properties` ustaw `online-mode=false`. Jest to wymaganie obecnego wdrożenia LoginCoreX na samodzielnym serwerze.
 4. Jeśli serwer działa samodzielnie, pozostaw obsługę Velocity wyłączoną w `config/paper-global.yml`.
 5. Uruchom serwer testowy. Plugin przygotuje swoje pliki i bazę kont.
 6. Sprawdź konsolę. Jeśli pojawi się błąd uruchomienia LoginCoreX, rozwiąż go przed otwarciem serwera dla graczy.
@@ -49,6 +53,8 @@ Nie uruchamiaj dwóch pluginów logowania jednocześnie bez sprawdzonej zgodnoś
 
 ## Szybka próba po instalacji
 
+- [ ] Próba użycia chronionego nicku premium bez potwierdzonej sesji Minecraft kończy się odmową dostępu.
+- [ ] Zweryfikowany gracz po użyciu `/premium` łączy się ponownie bez hasła serwerowego.
 - [ ] Nowy gracz widzi rejestrację z dwoma polami hasła.
 - [ ] Przy kolejnym wejściu pojawia się logowanie z jednym polem.
 - [ ] Przed logowaniem nie można chodzić, używać skrzynek ani komend.

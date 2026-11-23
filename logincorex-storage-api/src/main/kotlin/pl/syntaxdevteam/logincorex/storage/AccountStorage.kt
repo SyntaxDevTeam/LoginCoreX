@@ -161,6 +161,10 @@ interface AccountStorage : AutoCloseable {
         CompletableFuture.failedFuture(UnsupportedOperationException("UUID lookup unavailable"))
 
     fun findByUsername(username: AccountUsername): CompletionStage<AuthAccount?>
+    fun isPremiumLoginEnabled(accountId: AccountId, minecraftUuid: UUID): CompletionStage<Boolean> =
+        CompletableFuture.completedFuture(false)
+    fun enablePremiumLogin(accountId: AccountId, minecraftUuid: UUID): CompletionStage<Boolean> =
+        CompletableFuture.completedFuture(false)
     fun findPasswordHash(accountId: AccountId): CompletionStage<String?>
     fun findCredentials(username: AccountUsername): CompletionStage<AccountCredentials?>
     fun replacePasswordHash(accountId: AccountId, expectedHash: String?, newHash: String): CompletionStage<Boolean>

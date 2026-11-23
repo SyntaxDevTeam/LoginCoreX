@@ -8,10 +8,10 @@ Poznaj funkcje LoginCoreX. Wymagania serwera i dobór pliku pluginu opisuje [Zgo
 
 ## Logowanie graczy
 
-- Każdy gracz rejestruje konto i loguje się w oknie Minecrafta, również przy `online-mode=false`.
+- Domyślnie każdy gracz rejestruje konto serwerowe i loguje się w oknie Minecrafta.
   Hasło nie trafia do czatu ani do argumentu komendy.
 - Tożsamość powiązana z oficjalnym kontem Minecraft jest dodatkowo weryfikowana.
-  Wyłącznie uprawniony gracz ze zweryfikowaną tożsamością może pominąć hasło serwerowe.
+  Zalogowany gracz ze zweryfikowaną tożsamością może włączyć logowanie bez hasła serwerowego komendą `/premium`.
 - Chronionego nicku nie można przejąć poprzez wpisanie go w launcherze. Nieudana
   weryfikacja właściciela kończy połączenie.
 - Plugin pilnuje jednej aktywnej sesji konta i pozwala graczowi bezpiecznie zakończyć ją
@@ -83,7 +83,7 @@ recovery dla konta zmienionego przez starszą wersję. Szczegóły opisują stro
 ## Czego ta wersja nie oferuje
 
 Nie ma panelu WWW, 2FA, odzyskiwania przez e-mail, połączenia konta z Discordem,
-komend `/premium`, `/unregister` ani pełnego przeładowania konfiguracji bez restartu. `/lcx reload` odświeża jedynie listę pomijanych katalogów migracji.
+komendy `/unregister` ani pełnego przeładowania konfiguracji bez restartu. `/lcx reload` odświeża jedynie listę pomijanych katalogów migracji.
 Nie ma też potwierdzonej obsługi Bedrock/Geyser. LoginCoreX nie jest systemem kar i nie
 uznaje wspólnego IP lub wyniku usługi VPN za niepodważalny dowód nadużycia.
 

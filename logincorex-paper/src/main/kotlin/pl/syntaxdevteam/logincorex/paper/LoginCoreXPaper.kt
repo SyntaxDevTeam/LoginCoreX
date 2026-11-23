@@ -36,6 +36,7 @@ class LoginCoreXPaper : JavaPlugin() {
     internal val adminHelpCommandGateway = MutableAdminHelpCommandGateway()
     internal val reloadCommandGateway = MutableReloadCommandGateway()
     internal val consentCommandGateway = MutableConsentCommandGateway()
+    @Volatile internal var enablePremiumLogin: ((Player) -> Unit)? = null
     internal var commandsRegistered = false
     internal fun resetMessages() {
         if (this::messageHandler.isInitialized &&

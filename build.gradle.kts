@@ -10,7 +10,7 @@ plugins {
 
 group = "pl.syntaxdevteam"
 version = "1.0.0"
-description = "LoginCoreX - LoginCoreX is an advanced authentication and identity protection system for Minecraft servers."
+description = "Protects Minecraft servers from unauthorized access and guards premium usernames against impersonation. Keep online-mode=true at the public entry point whenever possible. We do not support piracy."
 
 val targetJavaVersion = libs.versions.java.get().toInt()
 val modules = listOf(

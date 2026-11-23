@@ -10,7 +10,7 @@ This version automatically opens a Minecraft form. Enter passwords there; comman
 
 ## No login dialog appears
 
-By default, every player must register and log in with the server password. Only specifically authorized, officially verified identities can bypass it. If a dialog does not appear, check client/server compatibility, plugin readiness and console errors. First test with a matching vanilla client without screen-changing mods.
+By default, every player must register and log in with the server password. Players who enabled `/premium` sign in through their verified Minecraft session on future visits. If a dialog does not appear, check client/server compatibility, plugin readiness and console errors. First test with a matching vanilla client without screen-changing mods.
 
 ## Passwords do not match or credentials are incorrect
 
@@ -59,7 +59,7 @@ Startup may still be preparing services. If the message persists, inspect the fi
 
 ## Password-change command opens nothing
 
-Run it in-game after authenticating. Check [Permissions](Permissions.md). Console cannot open forms. A newly verified player must register a server password before using this command unless exempted.
+Run it in-game after authenticating. Check [Permissions](Permissions.md). Console cannot open forms. Changing a server password requires an existing server password.
 
 ## Can I reload without restarting?
 

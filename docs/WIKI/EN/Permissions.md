@@ -9,7 +9,6 @@ Ordinary registration and login dialogs need no extra permission. Assign exact p
 | Permission | Access | Default |
 | --- | --- | --- |
 | `logincorex.command.changepassword` | Change your own server password | Everyone |
-| `logincorex.auth.skip-password` | Skip the server password after verified Minecraft session authentication | Disabled by default |
 | `logincorex.command.logout` | Sign out | Everyone |
 | `logincorex.command.privacy` | View the policy and manage acceptance | Everyone |
 | `logincorex.admin.info` | Basic account report | Operators |
@@ -30,7 +29,7 @@ Players only need the default player permissions. Restrict password resets and m
 
 `info` opens the basic report; `view-ip`, `view-geo`, `view-security` and `alts` independently add sensitive sections. Audit IPs require IP permission as well. The server console is trusted and receives all sections. Check inherited permissions and operator status when creating a restricted role.
 
-Permissions never bypass Minecraft session verification or world protection. Password changes and logout apply to authenticated accounts. The optional `logincorex.auth.skip-password` permission affects only the additional password prompt for players whose official Minecraft identity has already been verified; it does not skip identity verification, admission checks or privacy requirements.
+Permissions never bypass Minecraft session verification or world protection. Password changes and logout apply to authenticated accounts. Signed-in players with a verified Minecraft session can enable premium login with `/premium`. The command requires no special permission.
 
 ## Velocity
 

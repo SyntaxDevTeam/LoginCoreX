@@ -4,6 +4,8 @@
 
 [Home](Home.md) · [Konfiguracja](Konfiguracja.md) · [Integracje](Integracje.md)
 
+Zalecamy natywne uwierzytelnianie Minecraft w trybie `online-mode=true` na publicznym punkcie wejścia. Jeśli wdrożenie wymaga wyłączenia tego trybu, używaj LoginCoreX do blokowania nieautoryzowanego dostępu i ochrony nicków premium przed podszywaniem się. Gracz może użyć chronionego nicku tylko po potwierdzeniu sesji Minecraft. Nieudana weryfikacja kończy połączenie. [Zalecane użycie](Home.md#zalecane-użycie)
+
 ## Najpierw logowanie, potem rozgrywka
 
 Przed podaniem poprawnego hasła gracz nie może poruszać się, niszczyć ani stawiać bloków, używać przedmiotów, walczyć, pisać na czacie czy wykonywać komend. Jest też oddzielony od zalogowanych graczy i chroniony przed obrażeniami.

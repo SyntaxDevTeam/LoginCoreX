@@ -39,7 +39,6 @@ data class VerifiedMojangAuthenticationContext(
     val sourceAddress: InetAddress,
     val minecraftUuid: UUID,
     val sessionNonce: UUID? = null,
-    val passwordRequired: Boolean = false,
 )
 
 sealed interface VerifiedMojangAuthenticationResult {
@@ -76,9 +75,10 @@ class VerifiedMojangAuthenticationService(
             val result = when (binding) {
                 null -> error("Async authentication operation returned null: binding")
                 is MojangIdentityBindingResult.Bound ->
-                    return@thenCompose if (context.passwordRequired) {
-                        CompletableFuture.completedFuture(VerifiedMojangAuthenticationResult.PasswordRequired(binding.account))
-                    } else activateVerified(context, binding, verifiedAt)
+                    return@thenCompose storage.isPremiumLoginEnabled(binding.account.id, context.minecraftUuid).thenCompose { enabled ->
+                        if (enabled == true) activateVerified(context, binding, verifiedAt)
+                        else CompletableFuture.completedFuture(VerifiedMojangAuthenticationResult.PasswordRequired(binding.account))
+                    }
                 is MojangIdentityBindingResult.MigrationRequired -> {
                     audit(
                         context,

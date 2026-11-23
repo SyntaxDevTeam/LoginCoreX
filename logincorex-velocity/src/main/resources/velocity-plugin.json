@@ -2,7 +2,7 @@
   "id": "logincorex",
   "name": "LoginCoreX",
   "version": "${version}",
-  "description": "Player authentication and protection system for Velocity",
+  "description": "Protects Minecraft servers from unauthorized access and guards premium usernames against impersonation. Keep online-mode=true at the public entry point whenever possible. We do not support piracy.",
   "url": "https://syntaxdevteam.pl",
   "authors": ["SyntaxDevTeam"],
   "main": "pl.syntaxdevteam.logincorex.velocity.loader.SyntaxLoader"

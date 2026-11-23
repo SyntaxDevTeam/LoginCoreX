@@ -4,7 +4,13 @@
 
 ## Your account. Your name. Your game.
 
-LoginCoreX authenticates every player on Minecraft Java Edition servers, including servers with `online-mode=false`. Registration and sign-in use in-game dialogs, while administrators get tools for protecting accounts, controlling connection abuse and investigating problems.
+LoginCoreX protects access to Minecraft Java Edition servers with in-game authentication, account protection and connection abuse controls.
+
+## Recommended use
+
+Keep native Minecraft authentication enabled with `online-mode=true` at the public entry point whenever possible. If your deployment requires disabling it, use LoginCoreX to block unauthorized access and protect official Minecraft usernames from impersonation. LoginCoreX requires a verified Minecraft session for protected usernames and denies access if verification fails.
+
+We do not support piracy. Use a licensed copy of Minecraft: Java Edition and buy the game from the official store. [Minecraft.net](https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc)
 
 Whether you run a server for friends or a growing community, start with a local SQLite database, customize your messages and manage authentication in one place.
 

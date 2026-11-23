@@ -6,7 +6,9 @@ import pl.syntaxdevteam.logincorex.auth.premium.MojangIdentityHandoffPolicy
 import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationContext
 import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationResult
 import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationUseCase
+import pl.syntaxdevteam.logincorex.auth.session.SessionRegistry
 import pl.syntaxdevteam.logincorex.domain.account.AccountUsername
+import pl.syntaxdevteam.logincorex.domain.session.ConnectionState
 import pl.syntaxdevteam.logincorex.domain.session.ConnectionId
 import pl.syntaxdevteam.logincorex.integrations.mojang.MojangProfileIdentityLookup
 import pl.syntaxdevteam.logincorex.integrations.mojang.MojangProfileLookupResult
@@ -22,6 +24,7 @@ class AuthenticationDialogRouter(
     private val dialogs: AuthenticationDialogController,
     private val migrationDialogs: PremiumMigrationDialogController,
     private val access: PreAuthAccess,
+    private val sessions: SessionRegistry,
     private val scheduler: PaperPlatformScheduler,
     private val premiumLookup: MojangProfileIdentityLookup,
     private val mojangAuthentication: VerifiedMojangAuthenticationUseCase,
@@ -91,11 +94,11 @@ class AuthenticationDialogRouter(
             player.kick(internalFailureMessage)
             return
         }
+        val connectionId = ConnectionId(player.uniqueId)
+        val session = sessions.get(connectionId) ?: return
+        if (session.state != ConnectionState.PRE_AUTH) return
         mojangAuthentication.authenticate(
-            VerifiedMojangAuthenticationContext(
-                ConnectionId(player.uniqueId), username, sourceAddress, officialUuid,
-                passwordRequired = !player.hasPermission(PREMIUM_PASSWORD_BYPASS_PERMISSION),
-            ),
+            VerifiedMojangAuthenticationContext(connectionId, username, sourceAddress, officialUuid, session.sessionNonce),
         ).whenComplete { authenticationResult, authenticationFailure ->
             scheduler.entity(player, Runnable {
                 if (!player.isOnline) return@Runnable
@@ -134,10 +137,6 @@ class AuthenticationDialogRouter(
                 }
             })
         }
-    }
-
-    private companion object {
-        const val PREMIUM_PASSWORD_BYPASS_PERMISSION = "logincorex.auth.skip-password"
     }
 
     private fun routeOffline(player: Player, username: AccountUsername) {

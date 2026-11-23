@@ -6,7 +6,15 @@
 
 ## Sign in and play
 
-LoginCoreX requires every player to register and sign in, including on servers with `online-mode=false`. If a username belongs to an official Minecraft account, session ownership is also verified. By default, this player still uses a server password; the administrator may grant `logincorex.auth.skip-password` to exempt verified accounts from that extra password. Sign in to Microsoft in your launcher; never enter your Microsoft password in a server form.
+We do not support piracy. Use a licensed copy of Minecraft: Java Edition and buy the game from the official store. [Minecraft.net](https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc)
+
+On your first visit with an official Minecraft account, the server verifies your Minecraft session and asks you to register or sign in to your server account. After signing in, run `/premium` in-game. On future connections, LoginCoreX authenticates you through your official Minecraft session alone, with no server password prompt. Your choice is saved for your account and official UUID.
+
+The command requires a signed-in player with a verified Minecraft session. If you have an existing offline account under the same name, complete the migration below first. Failed Minecraft session verification denies access to a protected username, including after you enable `/premium`.
+
+After upgrading from a version with the `logincorex.auth.skip-password` permission, use the server form to sign in, then run `/premium`. If your account has no server password yet, LoginCoreX first opens the registration form.
+
+Sign in to Microsoft in your launcher. Never enter your Microsoft password in a server form.
 
 Choosing another player's protected Minecraft username in a launcher never grants access. Failed ownership verification denies access rather than switching to an unverified identity. Use another, unclaimed name if you do not own the official account.
 

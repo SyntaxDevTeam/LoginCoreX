@@ -21,6 +21,8 @@ reload:
   failure: '<red>Nie udało się przeładować konfiguracji. Popraw config.yml i sprawdź log serwera; poprzednie ustawienia nadal obowiązują.</red>'
 
 auth:
+  premium_login_enabled: '<green>Od następnego połączenia zalogujesz się zweryfikowaną sesją Minecraft, bez hasła serwerowego.</green>'
+  premium_login_verified_session_required: '<red>Komenda /premium wymaga zalogowania się na zweryfikowanym koncie Minecraft.</red>'
   connection_attempts_remaining: "<red>Pozostały Ci <remaining> próby połączenia.</red>"
   suspicious_connections: "<red>Suspicious connections.</red>"
   login_title: "<aqua>Logowanie konta dla <white><username></white></aqua>"

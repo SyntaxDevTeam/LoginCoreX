@@ -4,6 +4,8 @@
 
 [Home](Home.md) · [Komendy](Komendy.md) · [Pomoc](Pomoc.md)
 
+Graj na koncie Microsoft z legalnym dostępem do Minecraft: Java Edition. Grę możesz kupić w oficjalnym sklepie. [Minecraft.net](https://www.minecraft.net/en-us/store/minecraft-java-bedrock-edition-pc)
+
 ## Pierwsze wejście
 
 Jeśli wchodzisz pierwszy raz, zobaczysz okno rejestracji z Twoim nickiem. Wpisz wybrane hasło w oba pola i kliknij „Potwierdź”. Po udanej rejestracji możesz grać.
@@ -32,7 +34,7 @@ Wpisz `/logout`, aby zakończyć logowanie i rozłączyć się z serwerem. Konto
 
 ## Weryfikacja konta Minecraft
 
-Jeśli posiadasz oficjalne konto Minecraft, zaloguj się na nie w launcherze. Serwer zweryfikuje Twoją tożsamość, a następnie domyślnie poprosi o hasło do konta serwerowego. Administrator może przyznać zweryfikowanym graczom uprawnienie do pomijania tego hasła. Hasła do konta Microsoft nie wpisuj w oknie serwera. Szczegóły na stronie [tożsamości konta](Premium.md).
+Jeśli posiadasz oficjalne konto Minecraft, zaloguj się na nie w launcherze. Serwer zweryfikuje Twoją tożsamość, a następnie domyślnie poprosi o hasło do konta serwerowego. Po zalogowaniu wpisz `/premium`, aby przy kolejnych wejściach logować się wyłącznie przez oficjalną sesję Minecraft. Hasła do konta Microsoft nie wpisuj w oknie serwera. Szczegóły na stronie [tożsamości konta](Premium.md).
 
 ## Pamiętaj o swoim ekranie
 

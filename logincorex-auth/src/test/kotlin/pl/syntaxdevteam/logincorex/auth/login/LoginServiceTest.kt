@@ -1,6 +1,11 @@
 package pl.syntaxdevteam.logincorex.auth.login
 
 import pl.syntaxdevteam.logincorex.domain.account.*
+import pl.syntaxdevteam.logincorex.auth.session.AccountActivationGuard
+import pl.syntaxdevteam.logincorex.auth.session.InMemorySessionRegistry
+import pl.syntaxdevteam.logincorex.domain.session.AuthSession
+import pl.syntaxdevteam.logincorex.domain.session.AuthenticationMethod
+import pl.syntaxdevteam.logincorex.domain.session.ConnectionId
 import pl.syntaxdevteam.logincorex.security.audit.SecurityAuditSink
 import pl.syntaxdevteam.logincorex.security.audit.SecurityEvent
 import pl.syntaxdevteam.logincorex.security.executor.BoundedTaskExecutor
@@ -71,6 +76,45 @@ class LoginServiceTest {
         } finally { executor.close() }
     }
 
+    @Test
+    fun `unregistration needs fresh credentials and current admitted session before committing`() {
+        val realHash = hasher.hash("valid-password".toCharArray())
+        val credentials = credentials(realHash)
+        val account = credentials.account
+        val storage = FakeStorage(credentials)
+        val sessions = InMemorySessionRegistry()
+        val id = ConnectionId(account.minecraftUuid)
+        sessions.create(AuthSession.connecting(id, username, address, now))
+        val active = sessions.activate(id, account.id, id.value, IdentityType.OFFLINE, AuthenticationMethod.PASSWORD, now)
+        val executor = BoundedTaskExecutor(1, 2, "unregister-test")
+        try {
+            val login = service(storage, CapturingAudit(), executor, realHash)
+            val denied = AccountActivationGuard { _, _ -> CompletableFuture.completedFuture(false) }
+            val rejecting = AccountUnregistrationService(login, storage, sessions, denied, fixedClock())
+            val unregister = AccountUnregistrationService(login, storage, sessions, AccountActivationGuard.ALLOW, fixedClock())
+            assertIs<LoginResult.InvalidCredentials>(
+                unregister.unregister(active, "wrong-password".toCharArray()).toCompletableFuture().get(),
+            )
+            assertIs<LoginResult.InvalidCredentials>(
+                rejecting.unregister(active, "valid-password".toCharArray()).toCompletableFuture().get(),
+            )
+            assertEquals(0, storage.unregistrations)
+            assertEquals(active, sessions.getActive(id.value))
+
+            val password = "valid-password".toCharArray()
+            assertIs<LoginResult.Success>(unregister.unregister(active, password).toCompletableFuture().get())
+            assertNull(sessions.getActive(id.value))
+            assertTrue(password.all { it == '\u0000' })
+            assertEquals(0, storage.successes)
+            assertIs<LoginResult.InvalidCredentials>(
+                unregister.unregister(active, "valid-password".toCharArray()).toCompletableFuture().get(),
+            )
+            assertEquals(1, storage.unregistrations)
+        } finally {
+            executor.close()
+        }
+    }
+
     private fun service(storage: FakeStorage, audit: CapturingAudit, executor: BoundedTaskExecutor, dummyHash: String) =
         LoginService(storage, hasher, executor,
             LoginAttemptGate(FloodLimit(10, 10, Duration.ofMinutes(1)), 10), audit, dummyHash,
@@ -86,6 +130,11 @@ class LoginServiceTest {
     private class FakeStorage(private val credentials: AccountCredentials?) : AccountStorage {
         var lookups = 0
         var successes = 0
+        var unregistrations = 0
+        override fun unregisterOffline(verified: AccountCredentials, sourceAddress: InetAddress, at: Instant): CompletionStage<Boolean> {
+            unregistrations++
+            return CompletableFuture.completedFuture(verified == credentials)
+        }
         var lookupFailure: Exception? = null
         var synchronousFailure = false
         override fun findCredentials(username: AccountUsername): CompletionStage<AccountCredentials?> {

@@ -10,7 +10,14 @@ Nie popieramy piractwa. Zachęcamy do korzystania z legalnej kopii gry i zakupu 
 
 Przy pierwszym wejściu na oficjalnym koncie Minecraft serwer potwierdza sesję i prosi o rejestrację lub logowanie do konta serwerowego. Po zalogowaniu wpisz w grze `/premium`. Od kolejnego połączenia LoginCoreX uwierzytelnia Cię wyłącznie przez oficjalną sesję Minecraft, bez formularza hasła serwerowego. Wybór jest zapisywany dla Twojego konta i oficjalnego UUID.
 
-Komenda działa wyłącznie dla gracza zalogowanego ze zweryfikowaną sesją Minecraft. Jeśli masz dotychczasowe konto offline o tym samym nicku, najpierw ukończ opisaną niżej migrację. Nieudana weryfikacja chronionego nicku kończy połączenie, także po użyciu `/premium`.
+`/premium` dla zalogowanego konta offline wskazuje ponowne połączenie z oficjalną
+sesją Mojang na tym samym nicku. Po poprawnej weryfikacji sesji i zakwalifikowaniu
+konta do migracji LoginCoreX otwiera formularz starego hasła serwerowego. Jeśli
+formularz został już przygotowany po wejściu do gry, `/premium` otworzy go ponownie.
+Podczas wysyłania formularza i trwającej migracji obowiązuje dotychczasowy przebieg.
+W Configuration Phase formularz otwiera się automatycznie.
+
+Nieudana weryfikacja chronionego nicku kończy połączenie, także po użyciu `/premium`.
 
 Po aktualizacji z wersji z uprawnieniem `logincorex.auth.skip-password` zaloguj się przez formularz i wpisz `/premium`. Jeśli konto nie ma hasła serwerowego, wtyczka najpierw pokaże formularz rejestracji.
 

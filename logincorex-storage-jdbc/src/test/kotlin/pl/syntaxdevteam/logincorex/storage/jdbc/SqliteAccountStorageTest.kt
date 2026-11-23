@@ -440,6 +440,80 @@ class SqliteAccountStorageTest {
         assertEquals("new-hash", storage.findCredentials(identity.username).toCompletableFuture().get()?.passwordHash)
     }
 
+    @Test
+    fun `unregister atomically removes credentials and retains the name and UUID reservations`() = withStorage { storage ->
+        storage.migrate().toCompletableFuture().get()
+        val registration = registration("RetiredUser")
+        assertIs<RegistrationResult.Created>(storage.registerOffline(registration).toCompletableFuture().get())
+        val id = registration.accountId
+        val address = registration.sourceAddress
+        val at = registration.createdAt.plusSeconds(1)
+        storage.saveConsent(id, ConsentDecision.ACCEPTED, "1", at).toCompletableFuture().get()
+        val credentials = assertNotNull(storage.findCredentials(registration.username).toCompletableFuture().get())
+        assertFalse(storage.unregisterOffline(credentials.copy(passwordHash = "superseded"), address, at)
+            .toCompletableFuture().get())
+        val first = storage.unregisterOffline(credentials, address, at).toCompletableFuture()
+        val second = storage.unregisterOffline(credentials, address, at).toCompletableFuture()
+        assertEquals(1, listOf(first.get(), second.get()).count { it })
+
+        assertNull(storage.findCredentials(registration.username).toCompletableFuture().get())
+        assertNull(storage.findConsent(id).toCompletableFuture().get())
+        assertFalse(storage.replacePasswordHash(id, null, "new").toCompletableFuture().get())
+        assertIs<RegistrationResult.UsernameAlreadyExists>(
+            storage.registerOffline(registration.copy(accountId = AccountId.random())).toCompletableFuture().get(),
+        )
+        assertIs<MojangIdentityBindingResult.IdentityConflict>(storage.bindVerifiedMojangIdentity(
+            VerifiedMojangIdentity(registration.username, UUID.randomUUID(), address, at),
+        ).toCompletableFuture().get())
+        val inspection = assertNotNull(storage.inspect(registration.username).toCompletableFuture().get())
+        assertEquals(pl.syntaxdevteam.logincorex.domain.account.AccountState.DEREGISTERED, inspection.account.state)
+        assertNull(inspection.lastLoginAddress)
+        kotlin.test.assertFailsWith<java.util.concurrent.ExecutionException> {
+            storage.recordLoginSuccess(id, address, at).toCompletableFuture().get()
+        }
+    }
+
+    @Test
+    fun `unregister and premium preparation can only commit one transition`() = withStorage { storage ->
+        storage.migrate().toCompletableFuture().get()
+        val registration = registration("TransitionRace")
+        storage.registerOffline(registration).toCompletableFuture().get()
+        val credentials = assertNotNull(storage.findCredentials(registration.username).toCompletableFuture().get())
+        val at = registration.createdAt.plusSeconds(1)
+        val target = UUID.randomUUID()
+        val prepared = storage.preparePremiumMigration(
+            registration.accountId, registration.username, registration.minecraftUuid,
+            target, registration.sourceAddress, at,
+        ).toCompletableFuture()
+        val retired = storage.unregisterOffline(credentials, registration.sourceAddress, at).toCompletableFuture()
+        assertEquals(
+            prepared.get() is PremiumMigrationPreparationResult.Prepared,
+            !retired.get(),
+        )
+    }
+
+    @Test
+    fun `audit insert failure rolls back the account and consent changes`() = withStorageFile { storage, file ->
+        storage.migrate().toCompletableFuture().get()
+        val registration = registration("AuditRollback")
+        storage.registerOffline(registration).toCompletableFuture().get()
+        val at = registration.createdAt.plusSeconds(1)
+        storage.saveConsent(registration.accountId, ConsentDecision.ACCEPTED, "1", at).toCompletableFuture().get()
+        java.sql.DriverManager.getConnection("jdbc:sqlite:$file").use { connection ->
+            connection.createStatement().use {
+                it.executeUpdate("""CREATE TRIGGER reject_unregistration BEFORE INSERT ON security_events
+                    WHEN NEW.event_type = 'ACCOUNT_UNREGISTERED'
+                    BEGIN SELECT RAISE(ABORT, 'test rollback'); END""".trimIndent())
+            }
+        }
+        val credentials = assertNotNull(storage.findCredentials(registration.username).toCompletableFuture().get())
+        kotlin.test.assertFailsWith<java.util.concurrent.ExecutionException> {
+            storage.unregisterOffline(credentials, registration.sourceAddress, at).toCompletableFuture().get()
+        }
+        assertEquals(credentials, storage.findCredentials(registration.username).toCompletableFuture().get())
+        assertNotNull(storage.findConsent(registration.accountId).toCompletableFuture().get())
+    }
+
     private fun registration(usernameValue: String, maximumAccountsPerAddress: Int = 3): OfflineRegistration {
         val username = AccountUsername.parse(usernameValue)
         return OfflineRegistration(
@@ -454,12 +528,14 @@ class SqliteAccountStorageTest {
         Instant.parse("2026-08-31T18:00:00Z"),
     )
 
-    private fun withStorage(test: (JdbcAccountStorage) -> Unit) {
+    private fun withStorage(test: (JdbcAccountStorage) -> Unit) = withStorageFile { storage, _ -> test(storage) }
+
+    private fun withStorageFile(test: (JdbcAccountStorage, java.nio.file.Path) -> Unit) {
         val file = Files.createTempFile("logincorex-", ".sqlite")
         val executor = BoundedTaskExecutor(2, 8, "storage-test")
         val storage = JdbcAccountStorage("jdbc:sqlite:$file", 2, executor)
         try {
-            test(storage)
+            test(storage, file)
         } finally {
             storage.close()
             executor.close()

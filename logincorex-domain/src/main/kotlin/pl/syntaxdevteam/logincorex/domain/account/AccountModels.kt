@@ -22,6 +22,7 @@ enum class AccountState {
     AUTHENTICATING,
     AUTHENTICATED,
     LOCKED,
+    DEREGISTERED,
 }
 
 @ConsistentCopyVisibility

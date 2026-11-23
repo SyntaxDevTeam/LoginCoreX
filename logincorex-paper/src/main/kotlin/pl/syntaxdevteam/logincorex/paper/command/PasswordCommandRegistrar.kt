@@ -71,6 +71,7 @@ class PasswordCommandRegistrar(
     private val authenticationGateway: AuthenticationCommandGateway,
     private val enablePremiumLogin: (Player) -> Unit,
     private val canSuggestOnlinePlayers: (CommandSender) -> Boolean,
+    private val unregister: (Player) -> Unit = {},
 ) {
     private fun onlinePlayerArgument() =
         Commands.argument("username", StringArgumentType.word())
@@ -103,6 +104,14 @@ class PasswordCommandRegistrar(
                     .requires { it.sender is Player }
                     .executes { context ->
                         (context.source.sender as? Player)?.let(enablePremiumLogin)
+                        1
+                    }.build(),
+            )
+            event.registrar().register(
+                Commands.literal("unregister")
+                    .requires { it.sender is Player }
+                    .executes { context ->
+                        (context.source.sender as? Player)?.let(unregister)
                         1
                     }.build(),
             )

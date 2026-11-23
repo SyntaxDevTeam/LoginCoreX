@@ -8,7 +8,8 @@ Poniższe komendy działają na serwerze gry. Używa się ich po zalogowaniu, be
 
 | Komenda | Dla kogo | Co robi |
 | --- | --- | --- |
-| `/premium` | Zalogowany gracz ze zweryfikowaną sesją Minecraft | Włącza logowanie przez oficjalną sesję bez hasła serwerowego od kolejnego połączenia |
+| `/premium` | Gracz | Włącza logowanie premium po zalogowaniu lub otwiera ponownie przygotowany formularz migracji po weryfikacji Mojang |
+| `/unregister` | Zalogowane konto offline z lokalną bazą SQLite | Otwiera formularz potwierdzenia trwałego wyrejestrowania |
 | `/changepassword` | Zalogowany gracz | Otwiera okno zmiany własnego hasła |
 | `/logout` | Zalogowany gracz | Kończy sesję i rozłącza gracza |
 | `/lcx`, `/lcx help` | Zalogowany gracz lub konsola | Pokazuje sformatowaną listę komend dostępnych dla bieżącego nadawcy |
@@ -59,12 +60,22 @@ Przekaż nowe hasło prywatnie i poproś gracza o zmianę przez `/changepassword
 
 ## A gdzie `/login` i `/register`?
 
-Logowanie i rejestracja otwierają się automatycznie w oknie. `/login` i `/register` bez argumentów ponownie otwierają odpowiednie, już przygotowane okno podczas PRE_AUTH po wejściu do gry. Nie wpisuj hasła w komendzie. Komenda nie zmienia rodzaju formularza: `/register` nie zastępuje logowania do istniejącego konta. Podczas wysyłania formularza ponowne otwarcie jest pomijane. W autoryzacji przed wejściem do gry (Configuration Phase) korzystaj z automatycznego okna; komendy gracza nie są wtedy dostępne. Pozostałe komendy są zablokowane przed zalogowaniem.
+Logowanie i rejestracja otwierają się automatycznie w oknie. `/login` i `/register` bez argumentów ponownie otwierają odpowiednie, już przygotowane okno podczas PRE_AUTH po wejściu do gry. Nie wpisuj hasła w komendzie. Komenda nie zmienia rodzaju formularza: `/register` nie zastępuje logowania do istniejącego konta. Podczas wysyłania formularza ponowne otwarcie jest pomijane. W autoryzacji przed wejściem do gry (Configuration Phase) korzystaj z automatycznego okna; komendy gracza nie są wtedy dostępne. Przed zalogowaniem `/premium` może dodatkowo otworzyć przygotowany [formularz migracji](Premium.md).
 
-Komenda `/unregister` jest niedostępna. `/logincorex reload` przeładowuje obecnie
+`/logincorex reload` przeładowuje obecnie
 `migration.unmanaged-plugin-scan.ignored-plugin-directories` bez restartu i bez zatrzymywania
 uwierzytelniania. Pozostałe ustawienia nadal wymagają pełnego restartu serwera; komenda
 potwierdza liczbę aktywnych pominięć albo zachowuje poprzednią listę przy błędnym YAML/nazwie.
+
+## Wyrejestrowanie konta offline
+
+Wpisz `/unregister` bez argumentów, podaj bieżące hasło serwerowe w oknie i wybierz
+**Wyrejestruj konto**. Po powodzeniu wtyczka usuwa hasło i zapis zgody, a połączenie
+zostaje zamknięte. Nick i UUID pozostają zarezerwowane. Dane świata i innych wtyczek
+oraz audyt administratora są nadal przechowywane. Niedomknięta migracja blokuje operację.
+
+Komenda działa dla kont offline na backendzie z własną bazą SQLite, także gdy
+gracze wchodzą przez Velocity.
 
 ## Podejrzane multi-konta
 

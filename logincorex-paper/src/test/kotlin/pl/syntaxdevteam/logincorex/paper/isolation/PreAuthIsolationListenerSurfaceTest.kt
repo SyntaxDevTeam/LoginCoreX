@@ -1,5 +1,8 @@
 package pl.syntaxdevteam.logincorex.paper.isolation
 
+import net.kyori.adventure.text.Component
+import org.bukkit.entity.Player
+import org.bukkit.plugin.Plugin
 import org.bukkit.event.EventPriority
 import org.bukkit.event.EventHandler
 import org.bukkit.event.block.BlockBreakEvent
@@ -17,6 +20,16 @@ import org.bukkit.event.player.*
 import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.bukkit.event.vehicle.VehicleExitEvent
 import org.junit.jupiter.api.Test
+import pl.syntaxdevteam.logincorex.auth.session.InMemorySessionRegistry
+import pl.syntaxdevteam.logincorex.paper.privacy.ConsentGate
+import pl.syntaxdevteam.logincorex.paper.scheduler.PaperPlatformScheduler
+import pl.syntaxdevteam.logincorex.security.bot.ConnectionBehaviorGate
+import pl.syntaxdevteam.logincorex.security.bot.ConnectionBehaviorPolicy
+import pl.syntaxdevteam.logincorex.security.bot.UsernameBurstGate
+import pl.syntaxdevteam.logincorex.security.bot.UsernameBurstPolicy
+import java.lang.reflect.Proxy
+import java.time.Duration
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -60,6 +73,45 @@ class PreAuthIsolationListenerSurfaceTest {
             "Persistent Bukkit invulnerability must not be used for connection-scoped PRE_AUTH isolation",
         )
         assertTrue(EntityDamageEvent::class.java in cancellableEvents)
+    }
+
+    @Test
+    fun `PRE_AUTH handles premium locally without dispatching third-party commands`() {
+        val id = UUID.randomUUID()
+        val player = Player::class.java.cast(Proxy.newProxyInstance(
+            javaClass.classLoader, arrayOf(Player::class.java),
+        ) { _, method, _ ->
+            if (method.name == "getUniqueId") id else error("Unexpected Player call: ${method.name}")
+        })
+        val plugin = Plugin::class.java.cast(Proxy.newProxyInstance(
+            javaClass.classLoader, arrayOf(Plugin::class.java),
+        ) { _, method, _ -> error("Unexpected Plugin call: ${method.name}") })
+        var reopenCount = 0
+        var preAuth = true
+        val access = PreAuthAccess { preAuth }
+        val consent = ConsentGate()
+        val interval = Duration.ofSeconds(1)
+        val listener = PreAuthIsolationListener(
+            access, PreAuthIsolationManager(plugin, PaperPlatformScheduler(plugin), access, 20, Component.empty()),
+            InMemorySessionRegistry(), PreAuthAdmission(1),
+            UsernameBurstGate(UsernameBurstPolicy(2, 2, interval, interval, 10)),
+            ConnectionBehaviorGate(ConnectionBehaviorPolicy(5, 1, 1, 1, 1, interval, interval, 10)),
+            consent, reopenPremium = { reopenCount++ },
+        )
+        fun cancelled(command: String): Boolean =
+            PlayerCommandPreprocessEvent(player, command, mutableSetOf()).also(listener::onCommand).isCancelled
+
+        assertTrue(cancelled("/PrEmIuM"))
+        assertTrue(cancelled("/premium password"))
+        assertTrue(cancelled("/logincorex:premium"))
+        assertTrue(cancelled("/unregister"))
+        assertEquals(1, reopenCount)
+
+        preAuth = false
+        assertFalse(cancelled("/premium"))
+        consent.prepare(id)
+        assertTrue(cancelled("/premium"))
+        assertEquals(1, reopenCount)
     }
 
     private val cancellableEvents = listOf(

@@ -48,16 +48,29 @@ class PremiumMigrationDialogController(
     private val onPrepared: (Player, PremiumMigrationTicket) -> Unit,
 ) : Listener {
     private data class Form(
+        val player: Player,
         val account: AuthAccount,
         val targetMinecraftUuid: UUID,
-    )
+        val actionId: UUID = UUID.randomUUID(),
+    ) {
+        val submit = Key.key("logincorex", "premium_migration_submit/$actionId")
+        val cancel = Key.key("logincorex", "premium_migration_cancel/$actionId")
+    }
 
     private val forms = ConcurrentHashMap<UUID, Form>()
     private val submissions = ConcurrentHashMap.newKeySet<UUID>()
 
+    fun reopen(player: Player) {
+        val form = forms[player.uniqueId] ?: return
+        if (form.player === player && player.uniqueId !in submissions) {
+            player.showDialog(createDialog(form.account, form.targetMinecraftUuid, null, form.submit, form.cancel))
+        }
+    }
+
     fun show(player: Player, account: AuthAccount, targetMinecraftUuid: UUID, feedback: Component? = null) {
-        forms[player.uniqueId] = Form(account, targetMinecraftUuid)
-        player.showDialog(createDialog(account, targetMinecraftUuid, feedback))
+        val form = Form(player, account, targetMinecraftUuid)
+        forms[player.uniqueId] = form
+        player.showDialog(createDialog(account, targetMinecraftUuid, feedback, form.submit, form.cancel))
     }
 
     @EventHandler
@@ -65,18 +78,21 @@ class PremiumMigrationDialogController(
         val player = (event.commonConnection as? PlayerGameConnection)?.player ?: return
         val form = forms[player.uniqueId] ?: return
 
-        if (event.identifier == CANCEL) {
-            forms.remove(player.uniqueId)
-            submissions.remove(player.uniqueId)
+        if (form.player !== player) return
+
+        if (event.identifier == form.cancel) {
+            if (player.uniqueId in submissions || !forms.remove(player.uniqueId, form)) return
             scheduler.entity(player) {
                 if (player.isOnline) player.kick(text.cancelled)
             }
             return
         }
-        if (event.identifier != SUBMIT) return
+        if (event.identifier != form.submit) return
 
         val response = event.dialogResponseView ?: return
-        val password = response.getText(PASSWORD)?.toCharArray() ?: return
+        val input = response.getText(PASSWORD) ?: return
+        if (input.length !in 1..128) return
+        val password = input.toCharArray()
         val sourceAddress = player.address?.address ?: run {
             password.fill('\u0000')
             player.kick(text.internalFailure)
@@ -103,8 +119,8 @@ class PremiumMigrationDialogController(
 
         stage.whenComplete { result, failure ->
             scheduler.entity(player, Runnable {
+                if (!player.isOnline || forms[player.uniqueId] !== form) return@Runnable
                 submissions.remove(player.uniqueId)
-                if (!player.isOnline) return@Runnable
                 if (failure != null || result == null) {
                     show(player, form.account, form.targetMinecraftUuid, text.internalFailure)
                     return@Runnable
@@ -130,14 +146,17 @@ class PremiumMigrationDialogController(
 
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
-        forms.remove(event.player.uniqueId)
-        submissions.remove(event.player.uniqueId)
+        val player = event.player
+        val form = forms[player.uniqueId] ?: return
+        if (form.player === player && forms.remove(player.uniqueId, form)) submissions.remove(player.uniqueId)
     }
 
     internal fun createDialog(
         account: AuthAccount,
         targetMinecraftUuid: UUID,
         feedback: Component?,
+        submit: Key = SUBMIT,
+        cancel: Key = CANCEL,
     ): Dialog = Dialog.create { builder ->
         val body = mutableListOf(
             DialogBody.plainMessage(
@@ -165,10 +184,10 @@ class PremiumMigrationDialogController(
             .type(
                 DialogType.confirmation(
                     ActionButton.builder(text.submitLabel)
-                        .action(DialogAction.customClick(SUBMIT, null))
+                        .action(DialogAction.customClick(submit, null))
                         .build(),
                     ActionButton.builder(text.cancelLabel)
-                        .action(DialogAction.customClick(CANCEL, null))
+                        .action(DialogAction.customClick(cancel, null))
                         .build(),
                 ),
             )

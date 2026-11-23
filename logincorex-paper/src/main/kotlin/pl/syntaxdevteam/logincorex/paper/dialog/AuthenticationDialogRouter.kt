@@ -7,6 +7,7 @@ import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationCont
 import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationResult
 import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationUseCase
 import pl.syntaxdevteam.logincorex.auth.session.SessionRegistry
+import pl.syntaxdevteam.logincorex.domain.account.AccountState
 import pl.syntaxdevteam.logincorex.domain.account.AccountUsername
 import pl.syntaxdevteam.logincorex.domain.session.ConnectionState
 import pl.syntaxdevteam.logincorex.domain.session.ConnectionId
@@ -146,6 +147,8 @@ class AuthenticationDialogRouter(
                 if (failure != null) {
                     onFailure(failure)
                     player.kick(lookupUnavailableMessage)
+                } else if (account?.state == AccountState.DEREGISTERED) {
+                    player.kick(identityConflictMessage)
                 } else if (account == null) dialogs.showRegistration(player) else dialogs.showLogin(player)
             })
         }

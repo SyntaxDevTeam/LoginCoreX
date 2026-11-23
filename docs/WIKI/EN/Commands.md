@@ -8,7 +8,8 @@ Run player commands in Minecraft after signing in. The console supports help, re
 
 | Command | Purpose |
 | --- | --- |
-| `/premium` | Enable sign-in through your verified Minecraft session alone from the next connection |
+| `/premium` | Enable premium sign-in after login or reopen a prepared migration form after Mojang verification |
+| `/unregister` | Open the permanent unregistration form for a signed-in offline account on local SQLite storage |
 | `/changepassword` | Open a password-change dialog for your authenticated account |
 | `/logout` | End an active session and disconnect |
 | `/privacy [show\|accept\|reject\|revoke\|status]` | View the policy or manage acceptance after account authentication |
@@ -38,7 +39,7 @@ Confirm account ownership first. An authenticated administrator runs `/lcx setpa
 
 ## Login and reload
 
-Registration and login open automatically. Argument-free `/login` and `/register` reopen the matching form already prepared during PRE_AUTH after entering the game. Never supply a password as a command argument. These commands cannot switch the authorized form type and are ignored while submitting. During Configuration Phase, use the automatic dialog: player commands are unavailable there. `/premium` is available after sign-in with a verified Minecraft session. `/unregister` remains unavailable. Other commands are blocked before authentication; while waiting for privacy acceptance, only `/privacy` is allowed.
+Registration and login open automatically. Argument-free `/login` and `/register` reopen the matching form already prepared during PRE_AUTH after entering the game. Never supply a password as a command argument. These commands cannot switch the authorized form type and are ignored while submitting. During Configuration Phase, use the automatic dialog: player commands are unavailable there. `/premium` can also reopen the prepared [migration form](Premium.md) before sign-in. While waiting for privacy acceptance, only `/privacy` is allowed.
 
 `reload` updates only `migration.unmanaged-plugin-scan.ignored-plugin-directories`. Invalid YAML or directory names leave the last valid list active. Other settings and messages require a full restart.
 
@@ -51,3 +52,15 @@ Targets must be offline for `retry` and `recover`. Unfinished recovery blocks ac
 ## Proxy commands
 
 Velocity provides `/logincorex alts <name>` and `/logincorex session <name>`; other subcommands go to Paper. The session report requires `logincorex.admin.session` and works only for connected players. Staff with locally assigned identities require backend authentication and a separate staff proof. See [Velocity](Velocity.md).
+
+
+## Unregistering an offline account
+
+Run `/unregister` without arguments, enter your current server password in the dialog,
+and select **Unregister account**. After success, LoginCoreX removes your password and
+consent record and closes the connection. Your username and UUID remain reserved.
+World data, data from other plugins and administrative audit records are retained.
+An unfinished migration blocks unregistration.
+
+The command supports offline accounts on a backend with its own SQLite database,
+including players who connect through Velocity.

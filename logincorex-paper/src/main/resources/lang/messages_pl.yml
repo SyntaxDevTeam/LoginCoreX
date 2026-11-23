@@ -54,6 +54,7 @@ auth:
   logout_success: "<green>Sesja została bezpiecznie zakończona. Połącz się ponownie, aby się zalogować.</green>"
   integration_denied: "<red>Połączenie zostało odrzucone przez politykę bezpieczeństwa nazwy lub aktywną karę.</red>"
 migration:
+  reconnect_verified: "<yellow>Aby zmienić tożsamość na premium, połącz się ponownie z uwierzytelnioną sesją Mojang na tym nicku. Jeżeli konto kwalifikuje się do migracji, otworzy się formularz.</yellow>"
   title: "<gold>Migracja UUID konta — <white><username></white></gold>"
   prompt: "<yellow>Wykryto istniejące konto serwerowe o tym samym nicku.</yellow><newline><gray>Stare UUID:</gray> <white><old_uuid></white><newline><gray>Oficjalne UUID Minecraft:</gray> <white><new_uuid></white><newline><newline><gray>Aby potwierdzić, że oba profile należą do Ciebie, wpisz dotychczasowe hasło serwerowe. LoginCoreX nie zmieni UUID konta, dopóki migracja danych nie zostanie bezpiecznie zakończona.</gray>"
   password_label: "Dotychczasowe hasło serwerowe"
@@ -231,3 +232,12 @@ privacy:
   pending: "<yellow>Aktualna polityka prywatności wymaga Twojej decyzji. Użyj /privacy.</yellow>"
   usage: "<yellow>Użycie: /privacy [show|accept|reject|revoke|status]</yellow>"
   timeout: "<red>Upłynął czas na podjęcie decyzji o zasadach prywatności.</red>"
+
+unregister:
+  title: "<red>Wyrejestrowanie konta</red>"
+  prompt: "<yellow>Usuniesz hasło do konta offline i zostaniesz rozłączony. Nick i UUID pozostaną zarezerwowane, a dane świata pozostaną na serwerze. Ponowna rejestracja nie będzie możliwa.</yellow>"
+  confirm: "<red>Wyrejestruj konto</red>"
+  offline_only: "<yellow>Wyrejestrować można tylko konto offline.</yellow>"
+  storage_unavailable: "<yellow>Wyrejestrowanie wymaga lokalnej bazy danych SQLite.</yellow>"
+  denied: "<red>Wyrejestrowanie odrzucone. Sprawdź hasło lub status migracji i w razie potrzeby otwórz formularz ponownie.</red>"
+  success: "<green>Konto zostało wyrejestrowane.</green>"

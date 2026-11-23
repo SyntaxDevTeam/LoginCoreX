@@ -114,6 +114,30 @@ class InMemorySessionRegistryTest {
         assertNotNull(registry.disconnect(id, replacement.sessionNonce))
     }
 
+    @Test
+    fun `retirement preserves the session on rollback and blocks reconnect until commit`() {
+        val registry = InMemorySessionRegistry()
+        val original = connecting("RetiringPlayer")
+        val id = original.connectionId
+        assertTrue(registry.create(original))
+        val active = registry.activate(id, AccountId.random(), id.value,
+            IdentityType.OFFLINE, AuthenticationMethod.PASSWORD, now)
+        assertTrue(registry.beginAccountRetirement(active))
+        assertFalse(registry.beginAccountRetirement(active))
+
+        registry.finishAccountRetirement(active, committed = false)
+        assertEquals(active, registry.getActive(id.value))
+        assertTrue(registry.beginAccountRetirement(active))
+        registry.disconnect(id, active.sessionNonce)
+        val replacement = AuthSession.connecting(id, original.username, original.sourceAddress, now)
+        assertFalse(registry.create(replacement))
+
+        registry.finishAccountRetirement(active, committed = true)
+        assertNull(registry.getActive(id.value))
+        assertFalse(registry.beginAccountRetirement(active))
+        assertTrue(registry.create(replacement))
+    }
+
     private fun connecting(username: String) = AuthSession.connecting(
         ConnectionId.random(),
         AccountUsername.parse(username),

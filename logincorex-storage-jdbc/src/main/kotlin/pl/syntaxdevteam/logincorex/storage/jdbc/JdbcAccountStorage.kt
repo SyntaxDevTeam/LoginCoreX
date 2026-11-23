@@ -10,6 +10,7 @@ import pl.syntaxdevteam.logincorex.domain.account.IdentityType
 import pl.syntaxdevteam.logincorex.security.executor.BoundedTaskExecutor
 import pl.syntaxdevteam.logincorex.security.audit.SecurityAuditSink
 import pl.syntaxdevteam.logincorex.security.audit.SecurityEvent
+import pl.syntaxdevteam.logincorex.security.audit.SecurityEventType
 import pl.syntaxdevteam.logincorex.storage.ConnectionAccountLookup
 import pl.syntaxdevteam.logincorex.storage.RelatedOfflineAccount
 import pl.syntaxdevteam.logincorex.storage.MultiAccountReport
@@ -338,6 +339,11 @@ class JdbcAccountStorage(
         dataSource.connection.use { connection ->
             connection.autoCommit = false
             try {
+                lockAccount(connection, accountId)
+                if (findAccountById(connection, accountId)?.state == AccountState.DEREGISTERED) {
+                    connection.rollback()
+                    return@submit
+                }
                 val updated = connection.prepareStatement(
                     "UPDATE account_consent SET decision = ?, policy_version = ?, updated_at = ? WHERE account_id = ?",
                 ).use { statement ->
@@ -450,11 +456,13 @@ class JdbcAccountStorage(
         dataSource.connection.use { connection ->
             connection.autoCommit = false
             try {
+                lockAccount(connection, accountId)
                 val account = findAccountById(connection, accountId)
                 val targetOwner = findAccount(connection, "minecraft_uuid", targetMinecraftUuid.toString())
                 if (
                     account == null ||
                     account.username.canonical != username.canonical ||
+                    account.state == AccountState.DEREGISTERED ||
                     account.identityType != IdentityType.OFFLINE ||
                     account.minecraftUuid != sourceMinecraftUuid ||
                     targetMinecraftUuid == sourceMinecraftUuid ||
@@ -946,6 +954,75 @@ class JdbcAccountStorage(
             statement.executeQuery().use { it.next() }
         }
 
+    override fun unregisterOffline(
+        verified: AccountCredentials,
+        sourceAddress: InetAddress,
+        at: Instant,
+    ): CompletionStage<Boolean> = executor.submit {
+        val account = verified.account
+        dataSource.connection.use { connection ->
+            connection.autoCommit = false
+            try {
+                lockAccount(connection, account.id)
+                val lockedUntil = connection.prepareStatement("SELECT locked_until FROM accounts WHERE id = ?").use {
+                    it.setString(1, account.id.value.toString())
+                    it.executeQuery().use { rows -> if (rows.next()) rows.getString(1)?.let(Instant::parse) else null }
+                }
+                if (lockedUntil?.isAfter(at) == true) {
+                    connection.rollback()
+                    return@submit false
+                }
+                val updated = connection.prepareStatement(
+                    """UPDATE accounts SET state = 'DEREGISTERED', password_hash = NULL,
+                        last_login_at = NULL, last_login_ip = NULL, locked_until = NULL,
+                        failed_login_count = 0, updated_at = ?
+                        WHERE id = ? AND minecraft_uuid = ? AND identity_type = 'OFFLINE'
+                        AND state <> 'DEREGISTERED' AND password_hash = ?
+                        AND NOT EXISTS (SELECT 1 FROM identity_migrations m
+                            WHERE m.account_id = ? AND m.status <> 'COMPLETED')""".trimIndent(),
+                ).use { statement ->
+                    statement.setString(1, at.toString())
+                    statement.setString(2, account.id.value.toString())
+                    statement.setString(3, account.minecraftUuid.toString())
+                    statement.setString(4, verified.passwordHash)
+                    statement.setString(5, account.id.value.toString())
+                    statement.executeUpdate()
+                }
+                if (updated != 1) {
+                    connection.rollback()
+                    return@submit false
+                }
+                val accountId = account.id.value.toString()
+                for (table in listOf("account_consent", "offline_account_addresses", "premium_login_preferences")) {
+                    connection.prepareStatement("DELETE FROM $table WHERE account_id = ?").use {
+                        it.setString(1, accountId)
+                        it.executeUpdate()
+                    }
+                }
+                connection.prepareStatement("UPDATE account_identities SET active = 0 WHERE account_id = ?").use {
+                    it.setString(1, accountId)
+                    it.executeUpdate()
+                }
+                insertSecurityEvent(connection, SecurityEvent(
+                    at, account.id.value, account.minecraftUuid, account.username.value, sourceAddress,
+                    SecurityEventType.ACCOUNT_UNREGISTERED, "PLAYER_CONFIRMED",
+                ))
+                connection.commit()
+                true
+            } catch (failure: Throwable) {
+                connection.rollback()
+                throw failure
+            }
+        }
+    }
+
+    private fun lockAccount(connection: Connection, accountId: AccountId) {
+        connection.prepareStatement("UPDATE accounts SET state = state WHERE id = ?").use {
+            it.setString(1, accountId.value.toString())
+            it.executeUpdate()
+        }
+    }
+
     override fun findPasswordHash(accountId: AccountId): CompletionStage<String?> = executor.submit {
         dataSource.connection.use { connection ->
             connection.prepareStatement("SELECT password_hash FROM accounts WHERE id = ?").use { statement ->
@@ -976,7 +1053,7 @@ class JdbcAccountStorage(
     override fun replacePasswordHash(accountId: AccountId, expectedHash: String?, newHash: String): CompletionStage<Boolean> = executor.submit {
         dataSource.connection.use { connection ->
             val sql = if (expectedHash == null) {
-                "UPDATE accounts SET password_hash = ?, updated_at = ? WHERE id = ?"
+                "UPDATE accounts SET password_hash = ?, updated_at = ? WHERE id = ? AND state <> 'DEREGISTERED'"
             } else {
                 "UPDATE accounts SET password_hash = ?, updated_at = ? WHERE id = ? AND password_hash = ?"
             }
@@ -1027,7 +1104,7 @@ class JdbcAccountStorage(
             try {
                 // This update serializes address rotation with concurrent logins and premium migration.
                 connection.prepareStatement("""UPDATE accounts SET failed_login_count = 0, locked_until = NULL,
-                    last_login_at = ?, last_login_ip = ?, updated_at = ? WHERE id = ?""".trimIndent()).use { statement ->
+                    last_login_at = ?, last_login_ip = ?, updated_at = ? WHERE id = ? AND state <> 'DEREGISTERED'""".trimIndent()).use { statement ->
                     statement.setString(1, authenticatedAt.toString())
                     statement.setString(2, sourceAddress.hostAddress)
                     statement.setString(3, authenticatedAt.toString())
@@ -1057,7 +1134,7 @@ class JdbcAccountStorage(
                 SET failed_login_count = failed_login_count + 1,
                     locked_until = CASE WHEN failed_login_count + 1 >= ? THEN ? ELSE locked_until END,
                     updated_at = ?
-                WHERE id = ?""".trimIndent()).use { statement ->
+                WHERE id = ? AND state <> 'DEREGISTERED'""".trimIndent()).use { statement ->
                 statement.setInt(1, lockThreshold)
                 statement.setString(2, lockUntil.toString())
                 statement.setString(3, failedAt.toString())
@@ -1084,21 +1161,23 @@ class JdbcAccountStorage(
     }
 
     private fun persistSecurityEvent(event: SecurityEvent): CompletionStage<Void> = executor.submit {
-        dataSource.connection.use { connection ->
-            connection.prepareStatement("""INSERT INTO security_events
-                (occurred_at, account_id, minecraft_uuid, username, source_ip, event_type, reason_code)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""".trimIndent()).use { statement ->
-                statement.setString(1, event.timestamp.toString())
-                statement.setString(2, event.accountId?.toString())
-                statement.setString(3, event.minecraftUuid?.toString())
-                statement.setString(4, event.username)
-                statement.setString(5, event.sourceAddress.hostAddress)
-                statement.setString(6, event.type.name)
-                statement.setString(7, event.reasonCode)
-                statement.executeUpdate()
-            }
-        }
+        dataSource.connection.use { connection -> insertSecurityEvent(connection, event) }
     }.thenApply { null }
+
+    private fun insertSecurityEvent(connection: Connection, event: SecurityEvent) {
+        connection.prepareStatement("""INSERT INTO security_events
+            (occurred_at, account_id, minecraft_uuid, username, source_ip, event_type, reason_code)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""".trimIndent()).use { statement ->
+            statement.setString(1, event.timestamp.toString())
+            statement.setString(2, event.accountId?.toString())
+            statement.setString(3, event.minecraftUuid?.toString())
+            statement.setString(4, event.username)
+            statement.setString(5, event.sourceAddress.hostAddress)
+            statement.setString(6, event.type.name)
+            statement.setString(7, event.reasonCode)
+            statement.executeUpdate()
+        }
+    }
 
     private data class InspectionBase(
         val account: AuthAccount,
@@ -1147,6 +1226,7 @@ class JdbcAccountStorage(
         account: AuthAccount,
         identity: VerifiedMojangIdentity,
     ): MojangIdentityBindingResult {
+        if (account.state == AccountState.DEREGISTERED) return MojangIdentityBindingResult.IdentityConflict
         if (account.identityType == IdentityType.OFFLINE) {
             return MojangIdentityBindingResult.MigrationRequired(account, identity.minecraftUuid)
         }

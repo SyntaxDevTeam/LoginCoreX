@@ -47,3 +47,5 @@ Only `/privacy` is permitted while awaiting a decision. This behavior requires P
 For platform scope and functions outside the current release, see [Compatibility](Compatibility.md).
 
 Argument-free `/login` and `/register` reopen an already prepared PRE_AUTH form after entering the game. Configuration Phase authentication continues to use automatic dialogs.
+
+Offline accounts backed by local SQLite can be permanently unregistered through the [`/unregister` form](Commands.md#unregistering-an-offline-account).

@@ -11,6 +11,7 @@ import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationResu
 import pl.syntaxdevteam.logincorex.auth.premium.VerifiedMojangAuthenticationUseCase
 import pl.syntaxdevteam.logincorex.auth.session.PreJoinConnectionGate
 import pl.syntaxdevteam.logincorex.auth.session.SessionRegistry
+import pl.syntaxdevteam.logincorex.domain.account.AccountState
 import pl.syntaxdevteam.logincorex.auth.ui.AuthenticationFormContext
 import pl.syntaxdevteam.logincorex.domain.session.ConnectionState
 import pl.syntaxdevteam.logincorex.integrations.LoginAdmissionDecision
@@ -176,6 +177,8 @@ class ConfigurationAuthenticationRouter(
                 if (failure != null) {
                     runCatching { onFailure(failure) }
                     deny(connection, ticket, lookupUnavailableMessage)
+                } else if (account?.state == AccountState.DEREGISTERED) {
+                    deny(connection, ticket, identityConflictMessage)
                 } else {
                     val shown = if (account == null) dialogs.showRegistration(connection, ticket, context)
                         else dialogs.showLogin(connection, ticket, context)

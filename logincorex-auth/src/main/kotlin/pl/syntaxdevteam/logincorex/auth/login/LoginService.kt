@@ -42,7 +42,32 @@ class LoginService(
     private val lockoutPolicy: LockoutPolicy = LockoutPolicy(),
     private val clock: Clock = Clock.systemUTC(),
 ) : OfflineLoginUseCase {
-    override fun login(username: AccountUsername, sourceAddress: InetAddress, password: CharArray): CompletionStage<LoginResult> {
+    override fun login(username: AccountUsername, sourceAddress: InetAddress, password: CharArray): CompletionStage<LoginResult> =
+        verify(username, sourceAddress, password) { credentials, now ->
+            storage.recordLoginSuccess(credentials.account.id, sourceAddress, now).thenApply {
+                audit(username, sourceAddress, credentials, SecurityEventType.LOGIN_SUCCESS, "PASSWORD")
+                LoginResult.Success(credentials.account)
+            }
+        }
+
+    /** Uses the login limiter and lockout without recording a new login or activating a session. */
+    fun verifyForAccountChange(
+        username: AccountUsername,
+        sourceAddress: InetAddress,
+        password: CharArray,
+        change: (AccountCredentials) -> CompletionStage<Boolean>,
+    ): CompletionStage<LoginResult> = verify(username, sourceAddress, password) { credentials, _ ->
+        change(credentials).thenApply { changed ->
+            if (changed) LoginResult.Success(credentials.account) else LoginResult.InvalidCredentials
+        }
+    }
+
+    private fun verify(
+        username: AccountUsername,
+        sourceAddress: InetAddress,
+        password: CharArray,
+        onVerified: (AccountCredentials, java.time.Instant) -> CompletionStage<LoginResult>,
+    ): CompletionStage<LoginResult> {
         if (attemptGate.evaluate(sourceAddress) != LoginAttemptDecision.ALLOW) {
             password.fill('\u0000')
             audit(username, sourceAddress, null, SecurityEventType.LOGIN_FAILURE, "RATE_LIMITED")
@@ -61,7 +86,7 @@ class LoginService(
                 audit(username, sourceAddress, credentials, SecurityEventType.LOGIN_FAILURE, "ACCOUNT_LOCKED")
                 CompletableFuture.completedFuture(LoginResult.AccountLocked)
             } else {
-                verifyAndComplete(username, sourceAddress, password, credentials, now)
+                verifyAndComplete(username, sourceAddress, password, credentials, now, onVerified)
             }
         }.whenComplete { _, _ -> password.fill('\u0000') }
     }
@@ -72,6 +97,7 @@ class LoginService(
         password: CharArray,
         credentials: AccountCredentials?,
         now: java.time.Instant,
+        onVerified: (AccountCredentials, java.time.Instant) -> CompletionStage<LoginResult>,
     ): CompletionStage<LoginResult> {
         val verification = passwordExecutor.submit {
             hasher.verify(credentials?.passwordHash ?: dummyPasswordHash, password)
@@ -79,10 +105,7 @@ class LoginService(
         verification.whenComplete { _, _ -> password.fill('\u0000') }
         return verification.thenCompose { matches ->
             if (matches && credentials != null) {
-                storage.recordLoginSuccess(credentials.account.id, sourceAddress, now).thenApply {
-                    audit(username, sourceAddress, credentials, SecurityEventType.LOGIN_SUCCESS, "PASSWORD")
-                    LoginResult.Success(credentials.account)
-                }
+                onVerified(credentials, now)
             } else if (credentials != null) {
                 storage.recordLoginFailure(
                     credentials.account.id, now, lockoutPolicy.threshold, lockoutPolicy.duration,

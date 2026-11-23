@@ -80,10 +80,12 @@ recovery dla konta zmienionego przez starszą wersję. Szczegóły opisują stro
 - Wiadomości korzystają z MiniMessage i pliku językowego. Administrator może zmienić
   treść, kolory i etykiety bez tworzenia osobnego systemu wiadomości.
 
+Konta offline z lokalną bazą SQLite można trwale wyrejestrować przez [formularz `/unregister`](Komendy.md#wyrejestrowanie-konta-offline).
+
 ## Czego ta wersja nie oferuje
 
 Nie ma panelu WWW, 2FA, odzyskiwania przez e-mail, połączenia konta z Discordem,
-komendy `/unregister` ani pełnego przeładowania konfiguracji bez restartu. `/lcx reload` odświeża jedynie listę pomijanych katalogów migracji.
+ani pełnego przeładowania konfiguracji bez restartu. `/lcx reload` odświeża jedynie listę pomijanych katalogów migracji.
 Nie ma też potwierdzonej obsługi Bedrock/Geyser. LoginCoreX nie jest systemem kar i nie
 uznaje wspólnego IP lub wyniku usługi VPN za niepodważalny dowód nadużycia.
 

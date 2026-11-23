@@ -18,9 +18,22 @@ class InMemorySessionRegistry(
     private val activeAccounts = ConcurrentHashMap<AccountId, ConnectionId>()
     private val activeMinecraftIds = ConcurrentHashMap<UUID, ConnectionId>()
 
+    // Physical connections share the offline UUID as their key on Paper.
+    private val accountRetirements = mutableSetOf<ConnectionId>()
+
+    @Synchronized
+    fun beginAccountRetirement(session: AuthSession): Boolean =
+        get(session.connectionId) === session && session.isActive() && accountRetirements.add(session.connectionId)
+
+    @Synchronized
+    fun finishAccountRetirement(session: AuthSession, committed: Boolean) {
+        if (committed) disconnect(session.connectionId, session.sessionNonce)
+        accountRetirements.remove(session.connectionId)
+    }
+
     @Synchronized
     override fun create(session: AuthSession): Boolean =
-        sessions.putIfAbsent(session.connectionId, AtomicReference(session)) == null
+        session.connectionId !in accountRetirements && sessions.putIfAbsent(session.connectionId, AtomicReference(session)) == null
 
     override fun get(connectionId: ConnectionId): AuthSession? = sessions[connectionId]?.get()
 
@@ -90,6 +103,7 @@ class InMemorySessionRegistry(
         sessions.clear()
         activeAccounts.clear()
         activeMinecraftIds.clear()
+        accountRetirements.clear()
     }
 
     override fun size(): Int = sessions.size

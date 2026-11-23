@@ -43,6 +43,9 @@ import pl.syntaxdevteam.logincorex.auth.premium.PremiumMigrationRunResult
 import pl.syntaxdevteam.logincorex.auth.premium.PremiumMigrationService
 import pl.syntaxdevteam.logincorex.api.migration.IdentityMigrationProvider
 import pl.syntaxdevteam.logincorex.auth.password.PasswordChangeService
+import pl.syntaxdevteam.logincorex.auth.login.AccountUnregistrationService
+import pl.syntaxdevteam.logincorex.paper.dialog.UnregisterDialogController
+import pl.syntaxdevteam.logincorex.paper.dialog.UnregisterDialogText
 import pl.syntaxdevteam.logincorex.auth.registration.PasswordPolicy
 import pl.syntaxdevteam.logincorex.auth.registration.RegistrationService
 import pl.syntaxdevteam.logincorex.auth.session.PreJoinConnectionGate
@@ -173,6 +176,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 consentCommandGateway,
                 authenticationGateway = plugin.authenticationCommandGateway,
                 enablePremiumLogin = { player -> commandPlugin.enablePremiumLogin?.invoke(player) },
+                unregister = { player -> commandPlugin.unregister?.invoke(player) },
                 canSuggestOnlinePlayers = { sender ->
                     sender is ConsoleCommandSender ||
                         sender is Player &&
@@ -811,12 +815,17 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
         val premiumRequests = java.util.concurrent.ConcurrentHashMap.newKeySet<UUID>()
         val premiumEnabled = messages.stringMessageToComponentNoPrefix("auth", "premium_login_enabled")
         val premiumSessionRequired = messages.stringMessageToComponentNoPrefix("auth", "premium_login_verified_session_required")
+        val premiumReconnect = messages.stringMessageToComponentNoPrefix("migration", "reconnect_verified")
         val premiumEnableFailed = messages.stringMessageToComponentNoPrefix("auth", "internal_failure")
         plugin.enablePremiumLogin = enablePremium@{ player ->
             if (!player.isOnline || !isAuthenticated(player)) return@enablePremium
             val minecraftUuid = player.uniqueId
             val session = sessions.getActive(minecraftUuid)
             val accountId = session?.accountId
+            if (session?.identityType == IdentityType.OFFLINE) {
+                player.sendMessage(premiumReconnect)
+                return@enablePremium
+            }
             if (accountId == null || session.identityType != IdentityType.MOJANG || session.minecraftUuid != minecraftUuid ||
                 (session.authenticationMethod != AuthenticationMethod.MOJANG && session.authenticationMethod != AuthenticationMethod.PASSWORD)
             ) {
@@ -834,6 +843,35 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 })
             }
         }
+        val unregisterDialogs = UnregisterDialogController(
+            AccountUnregistrationService(login, storage, sessions, activationGuard), sessions, scheduler,
+            canOpen = { player -> player.isOnline && isAuthenticated(player) },
+            text = UnregisterDialogText(
+                messages.stringMessageToComponentNoPrefix("unregister", "title"),
+                messages.stringMessageToComponentNoPrefix("unregister", "prompt"),
+                messages.stringMessageToComponentNoPrefix("password", "current_label"),
+                messages.stringMessageToComponentNoPrefix("unregister", "confirm"),
+                messages.stringMessageToComponentNoPrefix("auth", "cancel_label"),
+                messages.stringMessageToComponentNoPrefix("unregister", "offline_only"),
+                messages.stringMessageToComponentNoPrefix("unregister", "denied"),
+                messages.stringMessageToComponentNoPrefix("auth", "account_locked"),
+                messages.stringMessageToComponentNoPrefix("auth", "rate_limited"),
+                messages.stringMessageToComponentNoPrefix("unregister", "success"),
+                messages.stringMessageToComponentNoPrefix("auth", "internal_failure"),
+            ),
+            onFailure = { logger.log(java.util.logging.Level.WARNING, "Account unregistration failed", it) },
+        )
+        // The in-memory registry has no cross-backend revocation protocol.
+        val unregisterUnavailable = messages.stringMessageToComponentNoPrefix("unregister", "storage_unavailable")
+        val localAccountStorage = config.getString("storage.type", "SQLITE").equals("SQLITE", ignoreCase = true)
+        plugin.unregister = { player ->
+            if (localAccountStorage) {
+                unregisterDialogs.open(player)
+            } else if (isAuthenticated(player)) {
+                player.sendMessage(unregisterUnavailable)
+            }
+        }
+        server.pluginManager.registerEvents(unregisterDialogs, plugin)
         val router = AuthenticationDialogRouter(
             storage, dialogs, premiumMigrationDialogs, access, sessions, scheduler,
             premiumLookup = premiumLookup,
@@ -1104,7 +1142,10 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
         server.pluginManager.registerEvents(passwordDialogs, plugin)
         server.pluginManager.registerEvents(
             PreAuthIsolationListener(access, isolation, sessions, admission, usernameBurstGate, behaviorGate,
-                consentGate, preJoinOwnsSessionCleanup = config.getBoolean("authentication.prejoin.experimental-enabled", false)
+                consentGate,
+                preJoinOwnsSessionCleanup = config.getBoolean("authentication.prejoin.experimental-enabled", false),
+                reopenPremium = { player -> if (readiness.acceptsAuthentication()) premiumMigrationDialogs.reopen(player) },
+                unregisterPending = unregisterDialogs::isSubmitting,
             ), plugin,
         )
         if (config.getBoolean("authentication.prejoin.experimental-enabled", false)) {
@@ -1245,6 +1286,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
         maintenance?.stop(cleanup, MinecraftServer.getServer().connection.connections.map { it.channel })
         server.servicesManager.unregisterAll(plugin)
         plugin.enablePremiumLogin = null
+        plugin.unregister = null
         plugin.authenticationCommandGateway.delegate = null
         passwordCommandGateway.delegate = null
         logoutCommandGateway.delegate = null

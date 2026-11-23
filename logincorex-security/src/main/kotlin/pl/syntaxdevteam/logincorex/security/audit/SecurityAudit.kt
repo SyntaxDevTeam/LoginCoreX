@@ -28,6 +28,7 @@ enum class SecurityEventType {
     @Suppress("unused")
     ANTI_FLOOD_DENY,
     SESSION_INVALIDATED,
+    ACCOUNT_UNREGISTERED,
     PASSWORD_CHANGE,
     ADMIN_PASSWORD_RESET,
 }

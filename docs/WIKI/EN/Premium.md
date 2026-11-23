@@ -10,7 +10,14 @@ We do not support piracy. Use a licensed copy of Minecraft: Java Edition and buy
 
 On your first visit with an official Minecraft account, the server verifies your Minecraft session and asks you to register or sign in to your server account. After signing in, run `/premium` in-game. On future connections, LoginCoreX authenticates you through your official Minecraft session alone, with no server password prompt. Your choice is saved for your account and official UUID.
 
-The command requires a signed-in player with a verified Minecraft session. If you have an existing offline account under the same name, complete the migration below first. Failed Minecraft session verification denies access to a protected username, including after you enable `/premium`.
+For a signed-in offline account, `/premium` directs you to reconnect with an official
+Minecraft session under the same name. If your session is verified and your account
+qualifies for migration, LoginCoreX opens the form for your old server password.
+If the form was already prepared after you entered the game, `/premium` reopens it.
+A pending submission or migration follows the existing workflow. During Configuration
+Phase, LoginCoreX opens the form automatically.
+
+Failed Minecraft session verification denies access to a protected username, including after you enable `/premium`.
 
 After upgrading from a version with the `logincorex.auth.skip-password` permission, use the server form to sign in, then run `/premium`. If your account has no server password yet, LoginCoreX first opens the registration form.
 

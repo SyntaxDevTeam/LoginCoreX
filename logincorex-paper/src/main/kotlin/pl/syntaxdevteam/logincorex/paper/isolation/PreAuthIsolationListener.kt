@@ -36,8 +36,11 @@ class PreAuthIsolationListener(
     private val behaviorGate: ConnectionBehaviorGate,
     private val consentGate: ConsentGate,
     private val preJoinOwnsSessionCleanup: Boolean = false,
+    private val reopenPremium: (Player) -> Unit = {},
+    private val unregisterPending: (Player) -> Boolean = { false },
 ) : Listener {
-    private fun blocked(player: Player) = access.isPreAuth(player.uniqueId) || consentGate.isPending(player.uniqueId)
+    private fun blocked(player: Player) =
+        access.isPreAuth(player.uniqueId) || consentGate.isPending(player.uniqueId) || unregisterPending(player)
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onMove(event: PlayerMoveEvent) { if (blocked(event.player)) event.isCancelled = true }
@@ -131,6 +134,15 @@ class PreAuthIsolationListener(
     fun onCommand(event: PlayerCommandPreprocessEvent) {
         val player = event.player
         if (!blocked(player)) return
+        if (unregisterPending(player)) {
+            event.isCancelled = true
+            return
+        }
+        if (access.isPreAuth(player.uniqueId) && event.message.trim().equals("/premium", ignoreCase = true)) {
+            event.isCancelled = true
+            reopenPremium(player)
+            return
+        }
         if (access.isPreAuth(player.uniqueId) && isAuthenticationFormCommand(event.message)) return
         val privacyCommand = event.message.substringBefore(' ').equals("/privacy", ignoreCase = true)
         val authenticated = sessions.getActive(player.uniqueId) != null

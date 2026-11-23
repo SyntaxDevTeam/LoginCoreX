@@ -89,6 +89,15 @@ class AuthenticationDialogController(
         player.showDialog(createDialog(FormType.REGISTER, player.name, feedback))
     }
 
+    /** Reopens only the form already authorized by the identity router. */
+    fun reopen(player: Player, registration: Boolean) {
+        val expected = expectedForms[player.uniqueId] ?: return
+        if (player.uniqueId in submissions) return
+        val requested = if (registration) FormType.REGISTER else FormType.LOGIN
+        if (expected.type != requested) return
+        player.showDialog(createDialog(expected.type, player.name, null))
+    }
+
     @EventHandler
     fun onCustomClick(event: PlayerCustomClickEvent) {
         val connection = event.commonConnection as? PlayerGameConnection ?: return

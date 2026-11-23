@@ -171,6 +171,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 adminHelpCommandGateway,
                 reloadCommandGateway,
                 consentCommandGateway,
+                authenticationGateway = plugin.authenticationCommandGateway,
                 canSuggestOnlinePlayers = { sender ->
                     sender is ConsoleCommandSender ||
                         sender is Player &&
@@ -801,6 +802,11 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
             }
         }
         val mojangAuthentication = VerifiedMojangAuthenticationService(storage, sessions, storage, activationGuard = activationGuard)
+        plugin.authenticationCommandGateway.delegate = pl.syntaxdevteam.logincorex.paper.command.AuthenticationCommandGateway { player, registration ->
+            if (readiness.acceptsAuthentication() && player.isOnline && access.isPreAuth(player.uniqueId)) {
+                dialogs.reopen(player, registration)
+            }
+        }
         val router = AuthenticationDialogRouter(
             storage, dialogs, premiumMigrationDialogs, access, scheduler,
             premiumLookup = premiumLookup,
@@ -1225,6 +1231,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
         val cleanup = CompletableFuture<Void>()
         maintenance?.stop(cleanup, MinecraftServer.getServer().connection.connections.map { it.channel })
         server.servicesManager.unregisterAll(plugin)
+        plugin.authenticationCommandGateway.delegate = null
         passwordCommandGateway.delegate = null
         logoutCommandGateway.delegate = null
         multiAccountCommandGateway.delegate = null

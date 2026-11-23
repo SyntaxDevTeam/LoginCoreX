@@ -27,6 +27,7 @@ class LoginCoreXPaper : JavaPlugin() {
         VersionCompatibility(versionChecker)
     }
 
+    internal val authenticationCommandGateway = pl.syntaxdevteam.logincorex.paper.command.MutableAuthenticationCommandGateway()
     internal val passwordCommandGateway = MutablePasswordCommandGateway()
     internal val logoutCommandGateway = MutableLogoutCommandGateway()
     internal val multiAccountCommandGateway = MutableMultiAccountCommandGateway()

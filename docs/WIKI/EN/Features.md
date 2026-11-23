@@ -45,3 +45,5 @@ Decisions are saved with the date and policy version and retained when the playe
 Only `/privacy` is permitted while awaiting a decision. This behavior requires Paper; the proxy module alone does not enforce it. Set your real HTTPS policy link and server-specific information. Acceptance is not a substitute for determining the appropriate legal basis for processing. ConsentChecker data is not automatically imported.
 
 For platform scope and functions outside the current release, see [Compatibility](Compatibility.md).
+
+Argument-free `/login` and `/register` reopen an already prepared PRE_AUTH form after entering the game. Configuration Phase authentication continues to use automatic dialogs.

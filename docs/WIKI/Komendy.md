@@ -58,7 +58,7 @@ Przekaż nowe hasło prywatnie i poproś gracza o zmianę przez `/changepassword
 
 ## A gdzie `/login` i `/register`?
 
-Logowanie i rejestracja otwierają się automatycznie w oknie. Ta wersja nie udostępnia tych komend. Przed zalogowaniem wszystkie komendy są zablokowane.
+Logowanie i rejestracja otwierają się automatycznie w oknie. `/login` i `/register` bez argumentów ponownie otwierają odpowiednie, już przygotowane okno podczas PRE_AUTH po wejściu do gry. Nie wpisuj hasła w komendzie. Komenda nie zmienia rodzaju formularza: `/register` nie zastępuje logowania do istniejącego konta. Podczas wysyłania formularza ponowne otwarcie jest pomijane. W autoryzacji przed wejściem do gry (Configuration Phase) korzystaj z automatycznego okna; komendy gracza nie są wtedy dostępne. Pozostałe komendy są zablokowane przed zalogowaniem.
 
 Nie ma komend `/premium` ani `/unregister`. `/logincorex reload` przeładowuje obecnie
 `migration.unmanaged-plugin-scan.ignored-plugin-directories` bez restartu i bez zatrzymywania

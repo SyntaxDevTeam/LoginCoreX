@@ -10,6 +10,15 @@ import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 
+fun interface AuthenticationCommandGateway {
+    fun open(player: Player, registration: Boolean)
+}
+
+class MutableAuthenticationCommandGateway : AuthenticationCommandGateway {
+    @Volatile var delegate: AuthenticationCommandGateway? = null
+    override fun open(player: Player, registration: Boolean) = delegate?.open(player, registration) ?: Unit
+}
+
 fun interface ConsentCommandGateway {
     fun execute(player: Player, action: String?)
 }
@@ -59,6 +68,7 @@ class PasswordCommandRegistrar(
     private val helpGateway: AdminHelpCommandGateway,
     private val reloadGateway: ReloadCommandGateway,
     private val consentGateway: ConsentCommandGateway,
+    private val authenticationGateway: AuthenticationCommandGateway,
     private val canSuggestOnlinePlayers: (CommandSender) -> Boolean,
 ) {
     private fun onlinePlayerArgument() =
@@ -76,6 +86,17 @@ class PasswordCommandRegistrar(
 
     fun register() {
         plugin.lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { event ->
+            for (name in listOf("login", "register")) {
+                event.registrar().register(
+                    Commands.literal(name)
+                        .executes { context ->
+                            (context.source.sender as? Player)?.let {
+                                authenticationGateway.open(it, name == "register")
+                            }
+                            1
+                        }.build(),
+                )
+            }
             event.registrar().register(
                 Commands.literal("privacy")
                     .requires { it.sender.hasPermission("logincorex.command.privacy") }

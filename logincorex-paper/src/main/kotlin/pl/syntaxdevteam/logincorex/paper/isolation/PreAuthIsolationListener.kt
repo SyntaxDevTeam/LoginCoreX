@@ -131,6 +131,7 @@ class PreAuthIsolationListener(
     fun onCommand(event: PlayerCommandPreprocessEvent) {
         val player = event.player
         if (!blocked(player)) return
+        if (access.isPreAuth(player.uniqueId) && isAuthenticationFormCommand(event.message)) return
         val privacyCommand = event.message.substringBefore(' ').equals("/privacy", ignoreCase = true)
         val authenticated = sessions.getActive(player.uniqueId) != null
         if (!privacyCommand || !authenticated || access.isPreAuth(player.uniqueId)) event.isCancelled = true
@@ -181,3 +182,7 @@ class PreAuthIsolationListener(
         admission.release(event.player.uniqueId)
     }
 }
+
+/** Only argument-free form commands are exposed during PRE_AUTH. */
+internal fun isAuthenticationFormCommand(message: String): Boolean =
+    message.trim().lowercase(java.util.Locale.ROOT) in setOf("/login", "/register")

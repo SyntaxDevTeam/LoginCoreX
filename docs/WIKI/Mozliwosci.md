@@ -83,7 +83,7 @@ recovery dla konta zmienionego przez starszą wersję. Szczegóły opisują stro
 ## Czego ta wersja nie oferuje
 
 Nie ma panelu WWW, 2FA, odzyskiwania przez e-mail, połączenia konta z Discordem,
-komend `/login`, `/register`, `/premium`, `/unregister` ani pełnego przeładowania konfiguracji bez restartu. `/lcx reload` odświeża jedynie listę pomijanych katalogów migracji.
+komend `/premium`, `/unregister` ani pełnego przeładowania konfiguracji bez restartu. `/lcx reload` odświeża jedynie listę pomijanych katalogów migracji.
 Nie ma też potwierdzonej obsługi Bedrock/Geyser. LoginCoreX nie jest systemem kar i nie
 uznaje wspólnego IP lub wyniku usługi VPN za niepodważalny dowód nadużycia.
 
@@ -95,3 +95,5 @@ Po poprawnym uwierzytelnieniu konta gracz pozostaje w izolacji do zaakceptowania
 Decyzja jest zapisywana razem z datą i wersją polityki oraz zachowywana po migracji do premium. Zwiększenie `privacy.policy-version` wymaga ponownej akceptacji przy kolejnym wejściu. Przekroczenie `privacy.timeout-seconds` lub błąd zapisu kończy połączenie. Odmowa i wycofanie nie nakładają automatycznej kary PunisherX.
 
 Podczas oczekiwania na decyzję dostępna jest tylko komenda `/privacy`; pozostałe działania pozostają zablokowane. Funkcja wymaga modułu Paper. Ustaw własny adres HTTPS polityki przez `privacy.policy-url` lub `privacy.link` i dostosuj treść do swojego serwera. Akceptacja nie zastępuje ustalenia właściwej podstawy przetwarzania danych. Dane ConsentChecker nie są importowane automatycznie.
+
+Komendy `/login` i `/register` bez argumentów ponownie otwierają przygotowany formularz PRE_AUTH po wejściu do gry. Autoryzacja przed wejściem nadal korzysta z automatycznego okna.

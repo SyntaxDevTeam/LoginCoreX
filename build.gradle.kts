@@ -24,7 +24,7 @@ val velocityDistribution = layout.projectDirectory.file("logincorex-velocity/bui
 val candidateMinecraft = providers.gradleProperty("paperDevBundleVersion")
     .getOrElse(libs.versions.paper.api.get()).substringBefore(".build.")
 val expectedPaperLibraries = listOf(
-    libs.kotlin.stdlib, libs.syntaxcore.paper, libs.messagehandler.paper, libs.hikari, libs.sqlite.jdbc,
+    libs.kotlin.stdlib, libs.messagehandler.paper, libs.hikari, libs.sqlite.jdbc,
     libs.mysql.jdbc, libs.mariadb.jdbc, libs.postgresql.jdbc, libs.argon2.jvm, libs.gson,
 ).map { it.get().toString() }
 
@@ -119,15 +119,23 @@ tasks {
         val paper = paperDistribution
         val velocity = velocityDistribution
         val coordinates = expectedPaperLibraries
+        val expectedVelocityMessageHandler = libs.messagehandler.velocity.get().toString()
         val expectedVersion = releaseVersion
         inputs.files(paper, velocity)
         inputs.property("runtimeLibraries", coordinates)
+        inputs.property("velocityMessageHandler", expectedVelocityMessageHandler)
         doLast {
             for (file in listOf(paper, velocity)) {
                 java.util.jar.JarFile(file).use { jar ->
                     val names = jar.entries().asSequence().map { it.name }.toList()
                     check(names.none { it.startsWith("kotlin/") && it.endsWith(".class") }) {
                         "${file.name} bundles Kotlin runtime classes"
+                    }
+                    check(names.none { it.contains("net/kyori/") && it.endsWith(".class") }) {
+                        "${file.name} bundles platform Adventure classes"
+                    }
+                    check(names.none { it.startsWith("META-INF/services/net.kyori.") }) {
+                        "${file.name} bundles Adventure service providers"
                     }
                     check(names.size == names.toSet().size) { "Duplicate entries in ${file.name}" }
                     check(jar.getEntry("pl/syntaxdevteam/logincorex/domain/session/AuthSession.class") != null)
@@ -144,11 +152,15 @@ tasks {
                         val actual = manifest.lineSequence().map { it.trim() }.filter { it.startsWith("- ") }
                             .map { it.removePrefix("- ") }.toList()
                         check(actual == coordinates) { "Paper runtime libraries differ from libs.versions.toml" }
+                        check(jar.getEntry("pl/syntaxdevteam/core/SyntaxCore.class") != null)
                         for (external in listOf("com/zaxxer/hikari/HikariDataSource.class", "org/sqlite/JDBC.class",
-                            "de/mkammerer/argon2/Argon2Factory.class", "pl/syntaxdevteam/core/SyntaxCore.class")) {
+                            "de/mkammerer/argon2/Argon2Factory.class")) {
                             check(jar.getEntry(external) == null) { "Paper duplicates runtime library: $external" }
                         }
                     } else {
+                        check(names.none { it.contains("com/github/benmanes/caffeine/") && it.endsWith(".class") }) {
+                            "Velocity supplies Caffeine"
+                        }
                         val descriptor = jar.getInputStream(jar.getJarEntry("velocity-plugin.json")).bufferedReader().use { it.readText() }
                         check("pl.syntaxdevteam.logincorex.velocity.loader.SyntaxLoader" in descriptor)
                         check(descriptor.lineSequence().any {
@@ -156,6 +168,15 @@ tasks {
                         }) { "Velocity descriptor version differs from project" }
                         val manifest = jar.getInputStream(jar.getJarEntry("velocity-libraries.txt"))
                             .bufferedReader().use { it.readLines() }
+                        check(jar.getEntry("pl/syntaxdevteam/core/proxy/ProxySyntaxCore.class") != null)
+                        check(manifest.any { it.startsWith("$expectedVelocityMessageHandler:") }) {
+                            "Velocity runtime manifest must load the Velocity variant of MessageHandler"
+                        }
+                        check(manifest.none { it.startsWith("net.kyori:") ||
+                            it.startsWith("com.github.ben-manes.caffeine:caffeine:") ||
+                            it.startsWith("pl.syntaxdevteam:syntaxcore-proxy:") }) {
+                            "Velocity runtime manifest contains a platform dependency or the unfiltered SyntaxCore artifact"
+                        }
                         val kotlinLibraries = manifest.filter { it.startsWith("org.jetbrains.kotlin:") }
                         check(kotlinLibraries.isNotEmpty()) { "Velocity runtime manifest omits Kotlin" }
                         check(manifest.take(kotlinLibraries.size) == kotlinLibraries) {

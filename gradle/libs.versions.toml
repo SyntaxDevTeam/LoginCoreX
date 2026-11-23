@@ -1,8 +1,8 @@
 [versions]
-kotlin = "2.4.21"
+kotlin = "2.5.0-RC"
 java = "25"
 syntaxcore = "1.5.0-R0.1-SNAPSHOT"
-messagehandler = "1.3.0-R0.3-SNAPSHOT"
+messagehandler = "1.3.0-R0.4-SNAPSHOT"
 luckperms = "5.5"
 gson = "2.15.0"
 snakeyaml = "2.7"

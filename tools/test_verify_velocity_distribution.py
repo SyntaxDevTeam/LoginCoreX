@@ -8,10 +8,11 @@ from verify_velocity_distribution import MAIN, REQUIRED_ENTRIES, REQUIRED_LIBRAR
 
 
 class VelocityDistributionTest(unittest.TestCase):
-    def artifact(self, main=MAIN, missing=None, libraries=None):
+    def artifact(self, main=MAIN, missing=None, libraries=None, extra_entries=()):
         buffer = io.BytesIO()
         checksum = base64.b64encode(bytes(32)).decode()
         entries = dict.fromkeys(REQUIRED_ENTRIES, b'class fixture')
+        entries.update(dict.fromkeys(extra_entries, b'class fixture'))
         entries['velocity-plugin.json'] = json.dumps({'id': 'logincorex', 'main': main})
         entries['velocity-libraries.txt'] = libraries if libraries is not None else '\n'.join(
             f'{library}:1.0:{checksum}' for library in sorted(REQUIRED_LIBRARIES))
@@ -48,16 +49,16 @@ class VelocityDistributionTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Duplicate runtime library'):
             verify(self.artifact(libraries=line + '\n' + line))
 
-    def test_paper_core_cannot_replace_proxy_core(self):
+    def test_platform_libraries_and_unfiltered_syntaxcore_are_rejected(self):
         checksum = base64.b64encode(bytes(32)).decode()
-        libraries = (REQUIRED_LIBRARIES - {'pl.syntaxdevteam:syntaxcore-proxy'}) | {'pl.syntaxdevteam:syntaxcore'}
-        manifest = '\n'.join(f'{library}:1.0:{checksum}' for library in libraries)
-        with self.assertRaisesRegex(ValueError, 'Paper SyntaxCore'):
-            verify(self.artifact(libraries=manifest))
+        for library in ('pl.syntaxdevteam:syntaxcore', 'pl.syntaxdevteam:syntaxcore-proxy',
+                        'net.kyori:adventure-api', 'com.github.ben-manes.caffeine:caffeine'):
+            manifest = '\n'.join(f'{coordinate}:1.0:{checksum}' for coordinate in REQUIRED_LIBRARIES | {library})
+            with self.subTest(library=library), self.assertRaisesRegex(ValueError, 'Unexpected runtime libraries'):
+                verify(self.artifact(libraries=manifest))
 
-    def test_missing_proxy_core_is_rejected(self):
-        checksum = base64.b64encode(bytes(32)).decode()
-        manifest = '\n'.join(f'{library}:1.0:{checksum}' for library in REQUIRED_LIBRARIES
-                             if library != 'pl.syntaxdevteam:syntaxcore-proxy')
-        with self.assertRaisesRegex(ValueError, 'Missing runtime libraries'):
-            verify(self.artifact(libraries=manifest))
+    def test_bundled_platform_libraries_are_rejected(self):
+        for entry in ('net/kyori/adventure/text/Component.class', 'com/github/benmanes/caffeine/cache/Cache.class',
+                      'META-INF/services/net.kyori.adventure.text.serializer.json.JSONComponentSerializer'):
+            with self.subTest(entry=entry), self.assertRaisesRegex(ValueError, 'bundles platform'):
+                verify(self.artifact(extra_entries=(entry,)))

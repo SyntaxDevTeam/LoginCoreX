@@ -18,6 +18,8 @@ LoginCoreX requires **Java 25**. Choose the JAR for your server platform and Min
 
 Players need clients that can display authentication dialogs. Allowing an older client to connect through another plugin does not guarantee that login forms will work.
 
+LoginCoreX uses the Paper or Velocity variant of MessageHandler **1.3.0-R0.4-SNAPSHOT**. The loader fetches the matching artifact, and the server or proxy provides Adventure components and serializers. The distribution includes SyntaxCore with its bundled copies of platform libraries removed.
+
 ## Authentication before world entry
 
 By default, the player is isolated from gameplay while waiting to sign in. The optional `authentication.prejoin.experimental-enabled` mode moves authentication before world entry. It is off by default; keep it disabled on a public server. Accounts needing account UUID migration must confirm the old server password and disconnect while data is moved.

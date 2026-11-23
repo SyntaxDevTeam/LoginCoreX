@@ -18,6 +18,8 @@ LoginCoreX wymaga **Javy 25**. Wybierz JAR zgodny z platformą i wersją Minecra
 
 Gracze potrzebują klientów obsługujących formularze logowania. Samo dopuszczenie starszego klienta przez inny plugin nie gwarantuje, że formularze będą działały.
 
+LoginCoreX używa MessageHandler **1.3.0-R0.4-SNAPSHOT** w wariancie Paper lub Velocity. Loader pobiera odpowiedni artefakt, a komponenty Adventure i serializatory pochodzą z serwera lub proxy. Do dystrybucji dołączamy SyntaxCore po usunięciu jego kopii bibliotek platformowych.
+
 ## Logowanie przed wejściem do świata
 
 Domyślnie gracz czekający na logowanie pozostaje odizolowany od rozgrywki. Opcjonalny tryb `authentication.prejoin.experimental-enabled` przenosi logowanie przed wejście do świata. Jest domyślnie wyłączony; na publicznym serwerze pozostaw go wyłączonym. Przy migracji UUID na oficjalnie zweryfikowaną tożsamość Minecraft gracz potwierdza dotychczasowe hasło serwerowe i zostaje rozłączony na czas przenoszenia danych.

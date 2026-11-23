@@ -12,12 +12,13 @@ REQUIRED_ENTRIES = (
     'pl/syntaxdevteam/logincorex/velocity/LoginCoreXVelocity.class',
     'pl/syntaxdevteam/logincorex/storage/jdbc/JdbcAccountStorage.class',
     'pl/syntaxdevteam/logincorex/velocity/libs/libby/VelocityLibraryManager.class',
+    'pl/syntaxdevteam/core/proxy/ProxySyntaxCore.class',
 )
 REQUIRED_LIBRARIES = {
     'com.zaxxer:HikariCP', 'org.xerial:sqlite-jdbc',
     'com.mysql:mysql-connector-j', 'org.mariadb.jdbc:mariadb-java-client',
     'org.postgresql:postgresql', 'org.jetbrains.kotlin:kotlin-stdlib',
-    'pl.syntaxdevteam:syntaxcore-proxy', 'pl.syntaxdevteam:messageHandler-velocity',
+    'pl.syntaxdevteam:messageHandler-velocity',
 }
 
 
@@ -29,6 +30,10 @@ def verify(jar):
         for entry in (*REQUIRED_ENTRIES, 'velocity-plugin.json', 'velocity-libraries.txt'):
             if entry not in names:
                 raise ValueError(f'Missing required Velocity JAR entry: {entry}')
+        if any((name.endswith('.class') and any(package in name for package in
+               ('net/kyori/', 'com/github/benmanes/caffeine/'))) or
+               name.startswith('META-INF/services/net.kyori.') for name in names):
+            raise ValueError('Velocity JAR bundles platform Adventure or Caffeine')
         descriptor = json.loads(archive.read('velocity-plugin.json'))
         if descriptor.get('id') != 'logincorex' or descriptor.get('main') != MAIN:
             raise ValueError(f'Invalid Velocity descriptor id/main: {descriptor}')
@@ -47,8 +52,12 @@ def verify(jar):
             if library in libraries:
                 raise ValueError(f'Duplicate runtime library: {library}')
             libraries.add(library)
-        if "pl.syntaxdevteam:syntaxcore" in libraries:
-            raise ValueError("Paper SyntaxCore must not be loaded on Velocity")
+        forbidden = {library for library in libraries if library.startswith('net.kyori:')}
+        forbidden |= libraries & {
+            'com.github.ben-manes.caffeine:caffeine', 'pl.syntaxdevteam:syntaxcore', 'pl.syntaxdevteam:syntaxcore-proxy',
+        }
+        if forbidden:
+            raise ValueError(f'Unexpected runtime libraries: {sorted(forbidden)}')
         missing = REQUIRED_LIBRARIES - libraries
         if missing:
             raise ValueError(f'Missing runtime libraries: {sorted(missing)}')

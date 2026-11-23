@@ -17,7 +17,15 @@ repositories {
     }
 }
 
+// The published SyntaxCore JAR embeds Adventure. Package its remaining classes and
+// resources locally so the platform supplies the native Adventure types.
+val syntaxCoreBundle = configurations.create("syntaxCoreBundle") {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+
 dependencies {
+    add(syntaxCoreBundle.name, libs.syntaxcore.paper)
     // Independent compilation against each 26.x Paper bundle is required for our
     // NMS premium login adapter; this property drives the compatibility matrix.
     paperweight.paperDevBundle(providers.gradleProperty("paperDevBundleVersion")
@@ -29,9 +37,9 @@ dependencies {
     implementation(project(":logincorex-storage-jdbc"))
     implementation(project(":logincorex-storage-api"))
     implementation(project(":logincorex-integrations"))
-    // Available for compilation/tests; SyntaxLoader supplies it at runtime, shadowJar excludes it.
-    compileOnly(libs.kotlin.stdlib)
     compileOnly(libs.syntaxcore.paper)
+    // SyntaxLoader supplies Kotlin and MessageHandler at runtime.
+    compileOnly(libs.kotlin.stdlib)
     compileOnly(libs.messagehandler.paper)
     compileOnly(libs.luckperms.api)
     compileOnly(libs.snakeyaml)
@@ -40,7 +48,6 @@ dependencies {
 
 val runtimeLibraries = mapOf(
     "kotlin" to libs.kotlin.stdlib.get().toString(),
-    "syntaxcore" to libs.syntaxcore.paper.get().toString(),
     "messagehandler" to libs.messagehandler.paper.get().toString(),
     "hikari" to libs.hikari.get().toString(),
     "sqlite" to libs.sqlite.jdbc.get().toString(),
@@ -70,6 +77,11 @@ tasks {
     }
 
     shadowJar {
+        from({ zipTree(syntaxCoreBundle.singleFile) }) {
+            exclude("net/kyori/**", "META-INF/versions/**/net/kyori/**", "META-INF/services/net.kyori.*")
+            exclude("kotlin/**", "META-INF/versions/**/kotlin/**", "META-INF/*.kotlin_module")
+            exclude("META-INF/MANIFEST.MF", "META-INF/maven/**", "**/module-info.class")
+        }
         archiveBaseName.set("LoginCoreX-Paper")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         archiveClassifier.set("")
@@ -79,7 +91,6 @@ tasks {
         dependencies {
             exclude(dependency("org.jetbrains.kotlin:kotlin-stdlib.*"))
             // Paper PluginLoader supplies these libraries, including native JDBC/Argon2 resources.
-            exclude(dependency("pl.syntaxdevteam:syntaxcore"))
             exclude(dependency("pl.syntaxdevteam:messageHandler-paper"))
             exclude(dependency("com.zaxxer:HikariCP"))
             exclude(dependency("org.xerial:sqlite-jdbc"))

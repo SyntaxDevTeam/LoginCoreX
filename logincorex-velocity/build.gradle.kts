@@ -23,7 +23,15 @@ repositories {
     }
 }
 
+// The published SyntaxCore JAR embeds Adventure. Package its remaining classes and
+// resources locally so the platform supplies the native Adventure types.
+val syntaxCoreBundle = configurations.create("syntaxCoreBundle") {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+
 dependencies {
+    add(syntaxCoreBundle.name, libs.syntaxcore.proxy)
     // Version override lets CI check source compatibility with every Velocity 4.x
     // release without relying on getSessionId (introduced only in 4.2.1).
     compileOnly("com.velocitypowered:velocity-api:" +
@@ -41,7 +49,7 @@ dependencies {
     testImplementation(libs.velocity.api)
     implementation(project(":logincorex-security"))
     implementation(project(":logincorex-integrations"))
-    implementation(libs.syntaxcore.proxy)
+    compileOnly(libs.syntaxcore.proxy)
     implementation(libs.messagehandler.velocity)
     implementation(libs.snakeyaml)
 
@@ -109,6 +117,13 @@ tasks {
         filesMatching("velocity-plugin.json") { expand(props) }
     }
     shadowJar {
+        from({ zipTree(syntaxCoreBundle.singleFile) }) {
+            exclude("net/kyori/**", "META-INF/versions/**/net/kyori/**", "META-INF/services/net.kyori.*")
+            // Velocity also supplies Caffeine, which SyntaxCore uses for its own caches.
+            exclude("com/github/benmanes/caffeine/**", "META-INF/versions/**/com/github/benmanes/caffeine/**")
+            exclude("kotlin/**", "META-INF/versions/**/kotlin/**", "META-INF/*.kotlin_module")
+            exclude("META-INF/MANIFEST.MF", "META-INF/maven/**", "**/module-info.class")
+        }
         archiveBaseName.set("LoginCoreX-Velocity")
         archiveClassifier.set("")
         dependencies {

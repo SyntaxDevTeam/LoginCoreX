@@ -83,7 +83,7 @@ class ConsentController(
                 if (!player.isOnline || sessions.getActive(id)?.sessionNonce != generation) return@Runnable
                 if (!enabled) {
                     isolation.release(player)
-                    runCatching { onAllowed(id) }
+                    val _ = runCatching { onAllowed(id) }
                     return@Runnable
                 }
                 val token = gate.token(id) ?: return@Runnable
@@ -195,7 +195,7 @@ class ConsentController(
     private fun allow(player: Player, token: Any) {
         if (gate.release(player.uniqueId, token)) {
             isolation.release(player)
-            runCatching { onAllowed(player.uniqueId) }
+            val _ = runCatching { onAllowed(player.uniqueId) }
         }
     }
 

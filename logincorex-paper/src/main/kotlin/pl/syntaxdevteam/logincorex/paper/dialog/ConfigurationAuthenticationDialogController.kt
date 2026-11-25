@@ -138,7 +138,7 @@ class ConfigurationAuthenticationDialogController(
             pending.inFlight.set(false)
             if (!current(pending)) return@whenComplete
             if (failure == null && result != null) {
-                runCatching { onOutcome(pending.context, result) }
+                val _ = runCatching { onOutcome(pending.context, result) }
             }
             if (failure == null && result == AuthenticationFormResult.AUTHENTICATED) {
                 val active = sessions.get(pending.context.connectionId)
@@ -152,7 +152,7 @@ class ConfigurationAuthenticationDialogController(
                 return@whenComplete
             }
             val message = if (failure != null) text.internalFailure else feedback(result)
-            runCatching { present(pending, message) }.onFailure { abandon(pending) }
+            val _ = runCatching { present(pending, message) }.onFailure { abandon(pending) }
         }
     }
 

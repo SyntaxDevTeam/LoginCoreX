@@ -118,20 +118,20 @@ class UniversalLocalIdentityMigrationProvider(
 
     override fun migrate(context: IdentityMigrationContext): CompletionStage<IdentityMigrationOperationResult> =
         executor.submit {
-            val plan = cachedPlan(context) ?: buildPlan(context).also { cachePlan(context, it) }
+            (val operations, val blockedReason) = cachedPlan(context) ?: buildPlan(context).also { cachePlan(context, it) }
             try {
-                if (plan.blockedReason != null) {
-                    return@submit IdentityMigrationOperationResult.Failure(plan.blockedReason)
+                if (blockedReason != null) {
+                    return@submit IdentityMigrationOperationResult.Failure(blockedReason)
                 }
-                if (plan.operations.isEmpty()) return@submit IdentityMigrationOperationResult.NoData
+                if (operations.isEmpty()) return@submit IdentityMigrationOperationResult.NoData
 
                 runCatching {
                     val ioBudget = MigrationIoBudget(maximumScanBytesPerSecond)
-                    val resolved = plan.operations.map { operation ->
+                    val resolved = operations.map { operation ->
                         operation to desiredContent(operation, context, ioBudget)
                     }
                     prepareRollback(context, resolved.map { it.first })
-                    resolved.forEach { (operation, content) ->
+                    resolved.forEach { [operation, content] ->
                         writeAtomically(operation.target, content, ioBudget)
                     }
                     IdentityMigrationOperationResult.Success
@@ -194,8 +194,8 @@ class UniversalLocalIdentityMigrationProvider(
             return LocalPlan(blockedReason = "PLUGIN_ROOT_UNAVAILABLE")
         }
 
-        val loadedRecipes = recipeRegistry.load()
-        loadedRecipes.errorCode?.let {
+        (val recipes, val errorCode) = recipeRegistry.load()
+        errorCode?.let {
             return LocalPlan(blockedReason = it)
         }
 
@@ -203,10 +203,10 @@ class UniversalLocalIdentityMigrationProvider(
             .map { it.lowercase(Locale.ROOT) }
             .toMutableSet()
             .apply { add(loginCoreDataDirectory.fileName.toString().lowercase(Locale.ROOT)) }
-        val recipesByDirectory = loadedRecipes.recipes.groupBy { it.pluginDirectory.lowercase(Locale.ROOT) }
+        val recipesByDirectory = recipes.groupBy { it.pluginDirectory.lowercase(Locale.ROOT) }
         val ignoredPluginDirectories = MigrationIgnorePolicy.normalize(ignoredPluginDirectoriesSupplier())
             .associateBy { it.lowercase(Locale.ROOT) }
-        val patterns = uuidPatterns(context.sourceMinecraftUuid)
+        (val bytes, val textNames) = uuidPatterns(context.sourceMinecraftUuid)
         val scanBudget = MigrationIoBudget(maximumScanBytesPerSecond)
         val operationsByTarget = linkedMapOf<Path, LocalOperation>()
         val unresolvedOwners = linkedSetOf<String>()
@@ -227,13 +227,13 @@ class UniversalLocalIdentityMigrationProvider(
                 if (canonicalOwner in excluded) continue
 
                 val recipeSources = linkedMapOf<Path, RecipeCandidate>()
-                for ((id1, _, rules) in recipesByDirectory[owner.lowercase(Locale.ROOT)].orEmpty()) {
+                for ((id, pluginDirectory, rules) in recipesByDirectory[owner.lowercase(Locale.ROOT)].orEmpty()) {
                     for (rule in rules) {
                         val source = safeResolve(directory, expand(rule.sourceTemplate, context))
                             ?: return LocalPlan(
                                 blockedReason = diagnostic(
                                     "UNIVERSAL_LOCAL_UNSAFE_PATH",
-                                    id1,
+                                    id,
                                     rule.sourceTemplate,
                                 ),
                             )
@@ -241,11 +241,11 @@ class UniversalLocalIdentityMigrationProvider(
                             ?: return LocalPlan(
                                 blockedReason = diagnostic(
                                     "UNIVERSAL_LOCAL_UNSAFE_PATH",
-                                    id1,
+                                    id,
                                     rule.targetTemplate,
                                 ),
                             )
-                        recipeSources[source] = RecipeCandidate(id1, rule, target)
+                        recipeSources[source] = RecipeCandidate(id, rule, target)
                     }
                 }
 
@@ -292,7 +292,7 @@ class UniversalLocalIdentityMigrationProvider(
 
                         if (intentionallyIgnored) {
                             val fileName = path.fileName.toString().lowercase(Locale.ROOT)
-                            if (patterns.textNames.any(fileName::contains) || containsPattern(path, patterns.bytes, scanBudget)) {
+                            if (textNames.any(fileName::contains) || containsPattern(path, bytes, scanBudget)) {
                                 ignoredOwners += owner
                             }
                             continue
@@ -308,7 +308,7 @@ class UniversalLocalIdentityMigrationProvider(
                                 )
                             }
                             if (recipe.rule.requireSourceUuidAbsentInContent &&
-                                containsPattern(path, patterns.bytes, scanBudget)
+                                containsPattern(path, bytes, scanBudget)
                             ) {
                                 unresolvedFound = true
                                 unresolvedOwners += owner
@@ -316,7 +316,12 @@ class UniversalLocalIdentityMigrationProvider(
                                 continue
                             }
                             if (recipe.rule.rewriteUuidInContent) {
-                                runCatching { rewriteUuid(readAllBytesThrottled(path, scanBudget), context) }.getOrElse {
+                                val _ = runCatching {
+                                    rewriteUuid(
+                                        readAllBytesThrottled(path, scanBudget),
+                                        context
+                                    )
+                                }.getOrElse {
                                     return LocalPlan(
                                         blockedReason = diagnostic(
                                             "UNIVERSAL_LOCAL_RECIPE_NOT_UTF8",
@@ -352,7 +357,7 @@ class UniversalLocalIdentityMigrationProvider(
                                     legacyEvidence = true,
                                 )
                             }
-                            if (containsPattern(path, patterns.bytes, scanBudget)) {
+                            if (containsPattern(path, bytes, scanBudget)) {
                                 unresolvedFound = true
                                 unresolvedOwners += owner
                                 reportPath(unresolvedPaths, path)
@@ -375,7 +380,7 @@ class UniversalLocalIdentityMigrationProvider(
                         }
 
                         val fileName = path.fileName.toString().lowercase(Locale.ROOT)
-                        if (patterns.textNames.any(fileName::contains) || containsPattern(path, patterns.bytes, scanBudget)) {
+                        if (textNames.any(fileName::contains) || containsPattern(path, bytes, scanBudget)) {
                             unresolvedFound = true
                             unresolvedOwners += owner
                             reportPath(unresolvedPaths, path)
@@ -426,11 +431,11 @@ class UniversalLocalIdentityMigrationProvider(
     }
 
     private fun genericTarget(path: Path, context: IdentityMigrationContext): Path? {
-        val match = genericUuidFile(path.fileName.toString(), context.sourceMinecraftUuid) ?: return null
-        val targetName = if (match.compact) {
-            context.targetMinecraftUuid.toString().replace("-", "") + match.suffix
+        (val suffix, val compact) = genericUuidFile(path.fileName.toString(), context.sourceMinecraftUuid) ?: return null
+        val targetName = if (compact) {
+            context.targetMinecraftUuid.toString().replace("-", "") + suffix
         } else {
-            context.targetMinecraftUuid.toString() + match.suffix
+            context.targetMinecraftUuid.toString() + suffix
         }
         return path.resolveSibling(targetName).toAbsolutePath().normalize()
     }

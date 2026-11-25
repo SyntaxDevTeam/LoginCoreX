@@ -46,7 +46,9 @@ class PaperLoginCheapGuard(
 
     @Volatile var observeDenial: ((String, PaperLoginGuardDecision) -> Unit)? = null
     private fun observed(rawUsername: String, result: PaperLoginGuardResult): PaperLoginGuardResult {
-        if (result.decision != PaperLoginGuardDecision.ALLOW) runCatching { observeDenial?.invoke(rawUsername, result.decision) }
+        if (result.decision != PaperLoginGuardDecision.ALLOW) {
+            val _ = runCatching { observeDenial?.invoke(rawUsername, result.decision) }
+        }
         return result
     }
     private val standaloneProtocolOwner = AtomicBoolean(false)

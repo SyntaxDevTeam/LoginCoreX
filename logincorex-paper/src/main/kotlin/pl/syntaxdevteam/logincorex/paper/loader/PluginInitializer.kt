@@ -189,7 +189,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
         val floodGate = ConnectionFloodGate(
             FloodLimit(8, 3, Duration.ofSeconds(1)), FloodLimit(400, 200, Duration.ofSeconds(1)), 50_000,
         )
-        val (usernameBurstGate, behaviorGate) = try {
+        val [usernameBurstGate, behaviorGate] = try {
             val maximumTrackedAddresses = positive("anti-bot.maximum-tracked-addresses")
             UsernameBurstGate(UsernameBurstPolicy(
                 positive("anti-bot.username-burst.maximum-distinct-usernames"),
@@ -341,15 +341,15 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 storage.loadConnectionTimeouts(positive("anti-bot.maximum-tracked-addresses"))
             }.thenApply { entries ->
                 val gate = requireNotNull(cheapGuard.timeoutGate)
-                gate.restore(entries.map { entry ->
+                gate.restore(entries.map { (val address, val started, val failures, val bannedUntil) ->
                     pl.syntaxdevteam.logincorex.security.login.ConnectionTimeoutGate.Entry(
-                        entry.address, entry.started, entry.failures, entry.bannedUntil,
+                        address, started, failures, bannedUntil,
                     )
                 })
                 val durable = pl.syntaxdevteam.logincorex.security.login.DurableConnectionTimeouts(gate) { snapshot ->
-                    storage.saveConnectionTimeouts(snapshot.map { entry ->
+                    storage.saveConnectionTimeouts(snapshot.map { (val address, val started, val failures, val bannedUntil) ->
                         pl.syntaxdevteam.logincorex.storage.ConnectionTimeoutState(
-                            entry.address, entry.started, entry.failures, entry.bannedUntil,
+                            address, started, failures, bannedUntil,
                         )
                     })
                 }
@@ -364,8 +364,9 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 if (!isEnabled || readiness.current() == RuntimeState.STOPPING) return@Runnable
                 if (failure != null) return@Runnable fail("Storage migration or password subsystem failed", failure)
                 runCatching {
+                    val [storage, dummyHash] = initialized
                     installAuthentication(
-                        initialized.first, initialized.second, hasher, messages, scheduler, sessions,
+                        storage, dummyHash, hasher, messages, scheduler, sessions,
                         passwordExecutor, mojangExecutor, migrationExecutor, migrationIgnorePolicy,
                         usernameBurstGate, behaviorGate, cheapGuard,
                     )
@@ -418,18 +419,19 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
             readiness::acceptsAuthentication,
             { id -> if (consentGate.isPending(id)) null else sessions.getActive(id) },
             storage::findByMinecraftUuid, storage::findByUsername,
-            revoke = { captured ->
+            revoke = { (val connectionId, val sessionNonce) ->
                 val result = CompletableFuture<Boolean>().orTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
                 scheduler.global {
-                    val player = server.getPlayer(captured.connectionId.value)
+                    val player = server.getPlayer(connectionId.value)
                     if (player == null) result.complete(false)
                     else scheduler.entity(player) {
                         if (result.isDone) return@entity
                         if (!readiness.acceptsAuthentication() || !player.isOnline ||
-                            sessions.get(captured.connectionId)?.sessionNonce != captured.sessionNonce) {
+                            sessions.get(connectionId)?.sessionNonce != sessionNonce
+                        ) {
                             result.complete(false)
                         } else {
-                            val revoked = sessions.disconnect(captured.connectionId, captured.sessionNonce) != null
+                            val revoked = sessions.disconnect(connectionId, sessionNonce) != null
                             if (revoked) player.kick(messages.stringMessageToComponentNoPrefix("auth", "logout_success"))
                             result.complete(revoked)
                         }
@@ -658,27 +660,27 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
             scheduler,
             messages.stringMessageToComponentNoPrefix("migration", "prepared"),
             messages.stringMessageToComponentNoPrefix("migration", "identity_conflict"),
-        ) { ticket, result, failure ->
+        ) { (val username, val sourceMinecraftUuid, val targetMinecraftUuid), result, failure ->
             when {
                 failure != null -> logger.log(
                     java.util.logging.Level.SEVERE,
-                    "Premium migration pipeline failed for ${ticket.username.value}",
+                    "Premium migration pipeline failed for ${username.value}",
                     failure,
                 )
                 result is PremiumMigrationRunResult.Completed -> logger.info(
-                    "Premium migration completed for ${ticket.username.value}: " +
-                        "${ticket.sourceMinecraftUuid} -> ${ticket.targetMinecraftUuid}",
+                    "Premium migration completed for ${username.value}: " +
+                        "$sourceMinecraftUuid -> $targetMinecraftUuid",
                 )
                 result is PremiumMigrationRunResult.Blocked -> logger.warning(
-                    "Premium migration blocked for ${ticket.username.value} by ${result.providerId}: ${result.reasonCode}",
+                    "Premium migration blocked for ${username.value} by ${result.providerId}: ${result.reasonCode}",
                 )
                 result is PremiumMigrationRunResult.Failed -> logger.warning(
-                    "Premium migration failed for ${ticket.username.value}" +
+                    "Premium migration failed for ${username.value}" +
                         (result.providerId?.let { " at $it" } ?: "") +
                         ": ${result.reasonCode}",
                 )
                 result is PremiumMigrationRunResult.AlreadyRunning -> logger.info(
-                    "Premium migration is already running for ${ticket.username.value}",
+                    "Premium migration is already running for ${username.value}",
                 )
             }
         }
@@ -697,25 +699,34 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
             FailureStrategy.valueOf(config.getString("integrations.cleanerx.failure-strategy", "FAIL_CLOSED")!!.uppercase()),
             FailureStrategy.valueOf(config.getString("integrations.punisherx.failure-strategy", "FAIL_CLOSED")!!.uppercase()),
         )
-        val activationGuard = pl.syntaxdevteam.logincorex.auth.session.AccountActivationGuard { account, address ->
-            loginAdmission.check(account.username, account.minecraftUuid, address).thenApply { decision ->
+        val activationGuard = pl.syntaxdevteam.logincorex.auth.session.AccountActivationGuard { (val id, val username, val minecraftUuid), address ->
+            loginAdmission.check(username, minecraftUuid, address).thenApply { decision ->
                 if (decision is pl.syntaxdevteam.logincorex.integrations.LoginAdmissionDecision.Deny) {
                     val type = if (decision.reasonCode.startsWith("CLEANER"))
                         pl.syntaxdevteam.logincorex.security.audit.SecurityEventType.USERNAME_POLICY_DENY
                     else pl.syntaxdevteam.logincorex.security.audit.SecurityEventType.PUNISHMENT_DENY
-                    runCatching { storage.record(pl.syntaxdevteam.logincorex.security.audit.SecurityEvent(
-                        java.time.Instant.now(), account.id.value, account.minecraftUuid, account.username.value,
-                        address, type, decision.reasonCode,
-                    )) }
+                    val _ = runCatching {
+                        storage.record(
+                            pl.syntaxdevteam.logincorex.security.audit.SecurityEvent(
+                                java.time.Instant.now(),
+                                id.value,
+                                minecraftUuid,
+                                username.value,
+                                address,
+                                type,
+                                decision.reasonCode,
+                            )
+                        )
+                    }
                 }
                 decision == pl.syntaxdevteam.logincorex.integrations.LoginAdmissionDecision.Allow
             }
         }
         val coordinator = AuthenticationFormCoordinator(login, registration, sessions, activationGuard = activationGuard,
-            completionObserver = { context, result ->
+            completionObserver = { (val username, val minecraftUuid, val sessionNonce), result ->
                 if (result != AuthenticationFormResult.AUTHENTICATED) eventBus.publish(AuthEvent(
-                    AuthEventType.AUTHENTICATION_FAILED, java.time.Instant.now(), context.minecraftUuid,
-                    context.username.value, context.sessionNonce, null,
+                    AuthEventType.AUTHENTICATION_FAILED, java.time.Instant.now(), minecraftUuid,
+                    username.value, sessionNonce, null,
                     if (result == null) pl.syntaxdevteam.logincorex.api.AuthFailureReason.INTERNAL_ERROR
                     else pl.syntaxdevteam.logincorex.api.AuthFailureReason.valueOf(result.name),
                 ))
@@ -723,7 +734,7 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
             admission.release(context.connectionId.value)
             consent.authenticated(context.connectionId.value)
             sendAuthenticationSuccess(context.connectionId.value, offlineAuthenticationSuccess)
-            sessions.get(context.connectionId)?.let { session -> runCatching { riskAlerts.observe(session) } }
+            sessions.get(context.connectionId)?.let { session -> val _ = runCatching { riskAlerts.observe(session) } }
         })
         val dialogText = AuthenticationDialogText(
             messages.stringMessageToComponentNoPrefix("auth", "login_title"),
@@ -836,11 +847,11 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
             storage.enablePremiumLogin(accountId, minecraftUuid).whenComplete { enabled, failure ->
                 premiumRequests.remove(minecraftUuid)
                 if (failure != null) logger.log(java.util.logging.Level.WARNING, "Cannot enable premium login", failure)
-                scheduler.entity(player, Runnable {
+                scheduler.entity(player) {
                     if (player.isOnline && sessions.getActive(minecraftUuid)?.sessionNonce == session.sessionNonce) {
                         player.sendMessage(if (enabled == true) premiumEnabled else premiumEnableFailed)
                     }
-                })
+                }
             }
         }
         val unregisterDialogs = UnregisterDialogController(
@@ -882,9 +893,13 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 val type = if (reason.startsWith("CLEANER"))
                     pl.syntaxdevteam.logincorex.security.audit.SecurityEventType.USERNAME_POLICY_DENY
                 else pl.syntaxdevteam.logincorex.security.audit.SecurityEventType.PUNISHMENT_DENY
-                runCatching { storage.record(pl.syntaxdevteam.logincorex.security.audit.SecurityEvent(
-                    java.time.Instant.now(), null, null, username.value, address, type, reason,
-                )) }
+                val _ = runCatching {
+                    storage.record(
+                        pl.syntaxdevteam.logincorex.security.audit.SecurityEvent(
+                            java.time.Instant.now(), null, null, username.value, address, type, reason,
+                        )
+                    )
+                }
             },
             premiumAuthenticationRequiredMessage = messages.stringMessageToComponentNoPrefix("auth", "premium_authentication_required"),
             lookupUnavailableMessage = messages.stringMessageToComponentNoPrefix("auth", "mojang_unavailable"),
@@ -1221,15 +1236,17 @@ class PluginInitializer(private val plugin: LoginCoreXPaper) {
                 onMojangActivated = { id ->
                     admission.release(id)
                 },
-                onAdmissionDenied = { context, reason ->
+                onAdmissionDenied = { (val username, val sourceAddress), reason ->
                     val type = if (reason.startsWith("CLEANER"))
                         pl.syntaxdevteam.logincorex.security.audit.SecurityEventType.USERNAME_POLICY_DENY
                     else pl.syntaxdevteam.logincorex.security.audit.SecurityEventType.PUNISHMENT_DENY
-                    runCatching {
-                        storage.record(pl.syntaxdevteam.logincorex.security.audit.SecurityEvent(
-                            java.time.Instant.now(), null, null, context.username.value, context.sourceAddress,
-                            type, reason,
-                        ))
+                    val _ = runCatching {
+                        storage.record(
+                            pl.syntaxdevteam.logincorex.security.audit.SecurityEvent(
+                                java.time.Instant.now(), null, null, username.value, sourceAddress,
+                                type, reason,
+                            )
+                        )
                     }
                 },
                 onFailure = { logger.log(java.util.logging.Level.WARNING, "Pre-join authentication routing failed", it) },

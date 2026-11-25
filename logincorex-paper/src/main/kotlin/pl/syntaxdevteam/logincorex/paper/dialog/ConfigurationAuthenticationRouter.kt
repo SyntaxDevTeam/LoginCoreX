@@ -59,9 +59,12 @@ class ConfigurationAuthenticationRouter(
                 .whenComplete { decision, failure ->
                     if (!current(connection, ticket, context)) return@whenComplete
                     if (failure != null || decision == null || decision is LoginAdmissionDecision.Deny) {
-                        if (failure != null) runCatching { onFailure(failure) }
-                        runCatching {
-                            onAdmissionDenied(context, (decision as? LoginAdmissionDecision.Deny)?.reasonCode ?: "INTEGRATION_FAILURE")
+                        if (failure != null) { val _ = runCatching { onFailure(failure) } }
+                        val _ = runCatching {
+                            onAdmissionDenied(
+                                context,
+                                (decision as? LoginAdmissionDecision.Deny)?.reasonCode ?: "INTEGRATION_FAILURE"
+                            )
                         }
                         deny(connection, ticket, integrationDeniedMessage)
                     } else {
@@ -69,7 +72,7 @@ class ConfigurationAuthenticationRouter(
                     }
                 }
         } catch (failure: Throwable) {
-            runCatching { onFailure(failure) }
+            val _ = runCatching { onFailure(failure) }
             deny(connection, ticket, internalFailureMessage)
         }
     }
@@ -83,7 +86,7 @@ class ConfigurationAuthenticationRouter(
             lookup.lookupProfile(context.username).whenComplete { result, failure ->
                 if (!current(connection, ticket, context)) return@whenComplete
                 if (failure != null || result == null || result == MojangProfileLookupResult.Unavailable) {
-                    if (failure != null) runCatching { onFailure(failure) }
+                    if (failure != null) { val _ = runCatching { onFailure(failure) } }
                     deny(connection, ticket, lookupUnavailableMessage)
                     return@whenComplete
                 }
@@ -95,7 +98,7 @@ class ConfigurationAuthenticationRouter(
                 }
             }
         } catch (failure: Throwable) {
-            runCatching { onFailure(failure) }
+            val _ = runCatching { onFailure(failure) }
             deny(connection, ticket, lookupUnavailableMessage)
         }
     }
@@ -120,7 +123,7 @@ class ConfigurationAuthenticationRouter(
             )).whenComplete { result, failure ->
                 if (!liveConnection(connection, ticket, context)) return@whenComplete
                 if (failure != null || result == null) {
-                    if (failure != null) runCatching { onFailure(failure) }
+                    if (failure != null) { val _ = runCatching { onFailure(failure) } }
                     deny(connection, ticket, internalFailureMessage)
                     return@whenComplete
                 }
@@ -129,7 +132,7 @@ class ConfigurationAuthenticationRouter(
                         storage.findPasswordHash(result.account.id).whenComplete { hash, passwordFailure ->
                             if (!current(connection, ticket, context)) return@whenComplete
                             if (passwordFailure != null) {
-                                runCatching { onFailure(passwordFailure) }
+                                val _ = runCatching { onFailure(passwordFailure) }
                                 deny(connection, ticket, internalFailureMessage)
                             } else {
                                 val verifiedContext = context.copy(verifiedMojang = true)
@@ -143,7 +146,7 @@ class ConfigurationAuthenticationRouter(
                     is VerifiedMojangAuthenticationResult.Success -> {
                         val active = sessions.get(context.connectionId)
                         if (active?.state == ConnectionState.ACTIVE && active.minecraftUuid == officialUuid) {
-                            if (gate.authenticated(ticket)) runCatching { onMojangActivated(context.minecraftUuid) }
+                            if (gate.authenticated(ticket)) { val _ = runCatching { onMojangActivated(context.minecraftUuid) } }
                         } else deny(connection, ticket, internalFailureMessage)
                     }
                     is VerifiedMojangAuthenticationResult.MigrationRequired -> {
@@ -161,7 +164,7 @@ class ConfigurationAuthenticationRouter(
                 }
             }
         } catch (failure: Throwable) {
-            runCatching { onFailure(failure) }
+            val _ = runCatching { onFailure(failure) }
             deny(connection, ticket, internalFailureMessage)
         }
     }
@@ -175,7 +178,7 @@ class ConfigurationAuthenticationRouter(
             storage.findByUsername(context.username).whenComplete { account, failure ->
                 if (!current(connection, ticket, context)) return@whenComplete
                 if (failure != null) {
-                    runCatching { onFailure(failure) }
+                    val _ = runCatching { onFailure(failure) }
                     deny(connection, ticket, lookupUnavailableMessage)
                 } else if (account?.state == AccountState.DEREGISTERED) {
                     deny(connection, ticket, identityConflictMessage)
@@ -186,7 +189,7 @@ class ConfigurationAuthenticationRouter(
                 }
             }
         } catch (failure: Throwable) {
-            runCatching { onFailure(failure) }
+            val _ = runCatching { onFailure(failure) }
             deny(connection, ticket, internalFailureMessage)
         }
     }

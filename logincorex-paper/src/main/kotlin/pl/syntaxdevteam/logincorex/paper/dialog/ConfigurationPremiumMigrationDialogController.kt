@@ -111,7 +111,7 @@ class ConfigurationPremiumMigrationDialogController(
                     // The player must be fully absent before world data is migrated.
                     connection.disconnect(text.prepared)
                     gate.deny(form.ticket)
-                    runCatching { onPrepared(response.ticket) }
+                    val _ = runCatching { onPrepared(response.ticket) }
                 }
                 PremiumMigrationAuthorizationResult.InvalidCredentials ->
                     runCatching { present(form, text.invalidCredentials) }.onFailure { reject(form) }

@@ -83,7 +83,7 @@ class VelocityLoginListener(
                         RiskDenial.UNAVAILABLE -> messages.unavailable
                     }
                     event.result = PreLoginEvent.PreLoginComponentResult.denied(message)
-                    runCatching { notify(username.value, address, decision.risk, true) }
+                    val _ = runCatching { notify(username.value, address, decision.risk, true) }
                 } else if (key != null && !pending.put(key, decision)) {
                     event.result = PreLoginEvent.PreLoginComponentResult.denied(messages.rateLimited)
                 } else {
@@ -105,7 +105,7 @@ class VelocityLoginListener(
     @Subscribe
     fun onLogin(event: LoginEvent, continuation: Continuation = ImmediateContinuation) {
         val player = event.player
-        runCatching { diagnostic("[login-diag] stage=LOGIN session=${VelocitySessionIds.native(player)} nick=${player.username} online=${player.isOnlineMode}") }
+        val _ = runCatching { diagnostic("[login-diag] stage=LOGIN session=${VelocitySessionIds.native(player)} nick=${player.username} online=${player.isOnlineMode}") }
         val nativeId = VelocitySessionIds.native(player)
         if (nativeId != null) {
             try {
@@ -189,17 +189,17 @@ class VelocityLoginListener(
                 if (!sessions.record(VelocitySessionIds.id(player), player.uniqueId, player.username, selected!!.mode)) {
                     event.result = ResultedEvent.ComponentResult.denied(messages.rateLimited)
                 } else {
-                    runCatching { notify(player.username, player.remoteAddress.address, selected.risk, false) }
+                    val _ = runCatching { notify(player.username, player.remoteAddress.address, selected.risk, false) }
                 }
             }
         } finally {
-            runCatching { diagnostic("[login-diag] stage=LOGIN_RESULT session=${VelocitySessionIds.native(player)} nick=${player.username} selected=${selected?.mode} online=${player.isOnlineMode} allowed=${event.result.isAllowed}") }
+            val _ = runCatching { diagnostic("[login-diag] stage=LOGIN_RESULT session=${VelocitySessionIds.native(player)} nick=${player.username} selected=${selected?.mode} online=${player.isOnlineMode} allowed=${event.result.isAllowed}") }
         }
     }
 
     @Subscribe
     fun onDisconnect(event: DisconnectEvent) {
-        runCatching { diagnostic("[login-diag] stage=DISCONNECT session=${VelocitySessionIds.native(event.player)} nick=${event.player.username} status=${event.loginStatus}") }
+        val _ = runCatching { diagnostic("[login-diag] stage=DISCONNECT session=${VelocitySessionIds.native(event.player)} nick=${event.player.username} status=${event.loginStatus}") }
         val id = VelocitySessionIds.discard(event.player) ?: return
         pending.discard(PendingConnectionKey(id))
         sessions.discard(id)
@@ -208,7 +208,7 @@ class VelocityLoginListener(
     private fun trace(event: PreLoginEvent, stage: String) {
         // Validate untrusted names before including them in console output.
         val name = runCatching { AccountUsername.parse(event.username).value }.getOrDefault("<invalid>")
-        runCatching { diagnostic("[login-diag] session=${VelocitySessionIds.native(event.connection)} nick=$name stage=$stage") }
+        val _ = runCatching { diagnostic("[login-diag] session=${VelocitySessionIds.native(event.connection)} nick=$name stage=$stage") }
     }
 
     private object ImmediateContinuation : Continuation {

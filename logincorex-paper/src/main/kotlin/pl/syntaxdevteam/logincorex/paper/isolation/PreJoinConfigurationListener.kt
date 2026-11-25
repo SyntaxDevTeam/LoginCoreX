@@ -208,7 +208,7 @@ class PreJoinConfigurationListener(
         ) {
             // A failed PlayerJoinEvent validation must not retain ACTIVE or a consent token.
             sessions.disconnect(record.ticket.connectionId, record.sessionNonce)
-            runCatching { onPreAuthEnd(id, record.consentToken.get()) }
+            val _ = runCatching { onPreAuthEnd(id, record.consentToken.get()) }
             event.player.kick(unavailableMessage)
             return
         }
@@ -224,7 +224,7 @@ class PreJoinConfigurationListener(
             admittedPlayers.remove(id, admitted)
         ) {
             sessions.disconnect(ConnectionId(id), admitted.sessionNonce)
-            runCatching { onPreAuthEnd(id, admitted.consentToken) }
+            val _ = runCatching { onPreAuthEnd(id, admitted.consentToken) }
         }
         reconfigurations[id]?.let { connection ->
             if (!connection.isConnected) reconfigurations.remove(id, connection)
@@ -254,7 +254,7 @@ class PreJoinConfigurationListener(
             migrationDialogs.forget(record.ticket)
             gate.disconnected(record.ticket)
             if (record.ownsSession.get()) sessions.disconnect(record.ticket.connectionId, record.sessionNonce)
-            runCatching { onPreAuthEnd(id, record.consentToken.get()) }
+            val _ = runCatching { onPreAuthEnd(id, record.consentToken.get()) }
         }
     }
 

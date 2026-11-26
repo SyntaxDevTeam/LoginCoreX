@@ -24,12 +24,12 @@ class ProxycheckHttpTest {
         server.createContext("/oversized") { exchange ->
             val bytes = ByteArray(70_000) { 32 }
             exchange.sendResponseHeaders(200, bytes.size.toLong())
-            runCatching { exchange.responseBody.use { it.write(bytes) } }
+            val _ = runCatching { exchange.responseBody.use { it.write(bytes) } }
         }
         server.createContext("/slow") { exchange ->
             exchange.sendResponseHeaders(200, 0)
             // Deliberately stall after headers to verify the entire-body timeout.
-            runCatching { Thread.sleep(1000); exchange.responseBody.use { it.write(body.toByteArray()) } }
+            val _ = runCatching { Thread.sleep(1000); exchange.responseBody.use { it.write(body.toByteArray()) } }
             exchange.close()
         }
         server.createContext("/redirect") { exchange ->
@@ -42,7 +42,7 @@ class ProxycheckHttpTest {
                 fun request(path: String, timeout: Duration = Duration.ofSeconds(2)) = ProxycheckIpLookup.requestHttp(
                     client, "8.8.8.8", URI.create("http://127.0.0.1:${server.address.port}/$path"), timeout,
                 )
-                assertTrue(request("ok")!!.vpn == true)
+                assertEquals(true, request("ok")!!.vpn)
                 assertNull(request("quota"))
                 assertNull(request("oversized"))
                 assertNull(request("redirect"))

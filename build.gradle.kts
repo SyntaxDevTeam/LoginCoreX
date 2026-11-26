@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.0"
+version = "1.0.1-R0.1-SNAPSHOT"
 description = "Protects Minecraft servers from unauthorized access and guards premium usernames against impersonation. Keep online-mode=true at the public entry point whenever possible. We do not support piracy."
 
 val targetJavaVersion = libs.versions.java.get().toInt()

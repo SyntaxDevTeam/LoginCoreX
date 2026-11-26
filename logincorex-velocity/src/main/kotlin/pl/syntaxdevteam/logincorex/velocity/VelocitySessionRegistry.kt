@@ -44,7 +44,9 @@ class VelocitySessionRegistry(
 
     fun findPlayer(playerId: UUID): ProxySessionSnapshot? = players[playerId]?.let { find(it, playerId) }
 
-    private fun observed(type: AuthEventType, session: ProxySessionSnapshot) { runCatching { observe(type, session) } }
+    private fun observed(type: AuthEventType, session: ProxySessionSnapshot) {
+        val _ = runCatching { observe(type, session) }
+    }
 
     fun find(sessionId: UUID, playerId: UUID): ProxySessionSnapshot? =
         sessions[sessionId]?.takeIf { it.playerId == playerId && players[playerId] == sessionId }

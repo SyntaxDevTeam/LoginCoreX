@@ -34,8 +34,12 @@ class InMemorySessionRegistryTest {
                 val start = CountDownLatch(1)
                 val activation = callers.submit {
                     start.await()
-                    runCatching { registry.activate(session.connectionId, AccountId.random(), uuid,
-                        IdentityType.OFFLINE, AuthenticationMethod.PASSWORD, now) }
+                    val _ = runCatching {
+                        registry.activate(
+                            session.connectionId, AccountId.random(), uuid,
+                            IdentityType.OFFLINE, AuthenticationMethod.PASSWORD, now
+                        )
+                    }
                 }
                 val clearing = callers.submit { start.await(); registry.clear() }
                 start.countDown()

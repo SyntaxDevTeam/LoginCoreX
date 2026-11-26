@@ -1156,7 +1156,7 @@ class JdbcAccountStorage(
     override fun close() = dataSource.close()
 
     override fun record(event: SecurityEvent): CompletionStage<Void> {
-        runCatching { auditObserver(event) }
+        val _ = runCatching { auditObserver(event) }
         return persistSecurityEvent(event)
     }
 

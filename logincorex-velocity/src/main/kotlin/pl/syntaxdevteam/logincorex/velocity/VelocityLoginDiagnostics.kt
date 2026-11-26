@@ -19,7 +19,7 @@ class VelocityLoginDiagnostics(private val sink: (String) -> Unit) : AutoCloseab
         if (now - window >= TimeUnit.MINUTES.toNanos(1)) { window = now; lines = 0 }
         if (lines >= 120 || writer.isShutdown) return
         lines++
-        writer.execute { runCatching { sink(line) } }
+        writer.execute { val _ = runCatching { sink(line) } }
     }
 
     override fun close() { writer.shutdownNow() }
